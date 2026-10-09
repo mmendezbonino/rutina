@@ -190,6 +190,7 @@ LEN.ua=sL0.distanceTo(J0.eL); LEN.fa=J0.eL.distanceTo(wp(BN.hand_l)); LEN.th=J0.
 const CURL=[];
 const GRIP={pull:'pro',row:'neu',rdelt:'neu',lat:'dbz',preacher:'sup',hammer:'neu',bench:'pro',incline:'proL',fly:'neu',skull:'pro',pushdown:'neu',rower:'pro',hack:'neu',press:'neu',calfpress:'neu',legcurl:'neu',legext:'neu',abd:'neu',add:'neu'};
 const cl1=x=>Math.max(-1,Math.min(1,x));
+function twistA(bone,axis,ang){const q=new T.Quaternion().setFromAxisAngle(axis,ang); bone.quaternion.copy(wq(bone.parent).invert().multiply(q.multiply(wq(bone)))); bone.updateWorldMatrix(false,true)}
 function twist(bone,axis,from,to){const a=perp(from,axis), b=perp(to,axis); let ang=Math.acos(cl1(a.dot(b))); if(new T.Vector3().crossVectors(a,b).dot(axis)<0) ang=-ang;
   const q=new T.Quaternion().setFromAxisAngle(axis,ang); bone.quaternion.copy(wq(bone.parent).invert().multiply(q.multiply(wq(bone)))); bone.updateWorldMatrix(false,true)}
 Object.keys(BN).forEach(n=>{const m=n.match(/^(index|middle|ring|pinky|thumb)_0([123])_(l|r)$/); if(!m) return;
@@ -198,7 +199,7 @@ Object.keys(BN).forEach(n=>{const m=n.match(/^(index|middle|ring|pinky|thumb)_0(
     const t1=wp(BN['thumb_01_'+m[3]]), t2=wp(BN['thumb_02_'+m[3]]); ax=new T.Vector3().crossVectors(t2.sub(t1).normalize(),U0.clone().negate()).normalize();
   } else ax=(m[3]==='l'?F0.clone().negate():F0.clone());
   ax.applyQuaternion(wq(BN[n]).invert());
-  CURL.push({b:BN[n],ax,amt:m[1]==='thumb'?.7:1,seg:+m[2]})});
+  CURL.push({b:BN[n],ax,amt:m[1]==='thumb'?-.75:1,seg:+m[2]})});
 
 function classify(skm){
   const g=skm.geometry, pos=g.attributes.position, nor=g.attributes.normal, si=g.attributes.skinIndex, sw=g.attributes.skinWeight;
@@ -265,14 +266,23 @@ function placeBody(J){
   const f=J.f;
   MODEL.position.set(0,0,0); MODEL.quaternion.copy(basisQ(f.L,f.U,f.F).multiply(Q0inv)); MODEL.updateMatrixWorld(true);
   MODEL.position.copy(f.P.clone().sub(wp(BN.pelvis))); MODEL.updateMatrixWorld(true);
-  J.arms.forEach((a,i)=>{const s=i?'r':'l';
-    aim(BN['upperarm_'+s],BN['lowerarm_'+s],a.e.clone().sub(a.s));
-    aim(BN['lowerarm_'+s],BN['hand_'+s],a.w.clone().sub(a.e));
-    aim(BN['hand_'+s],BN['middle_01_'+s],a.hd||a.w.clone().sub(a.e));
-    const gt=J.gtype, fd=a.w.clone().sub(a.e).normalize(), sg=i?-1:1;
+  J.arms.forEach((a,i)=>{const s=i?'r':'l', UA=BN['upperarm_'+s], LA=BN['lowerarm_'+s], HD=BN['hand_'+s];
+    // brazo con bisagra de codo: el antebrazo siempre se flexiona hacia el frente del brazo, sin rotaciones raras
+    const A0=wp(LA).sub(wp(UA)).normalize(), B0=perp(f.F,A0), A=a.e.clone().sub(a.s).normalize(), fw=a.w.clone().sub(a.e);
+    const bp=fw.clone().addScaledVector(A,-fw.dot(A)), bm=bp.length()/Math.max(.01,fw.length());
+    const pd=a.pole?perp(perp(a.pole,dirTo(a.s,a.w)).negate(),A):perp(a.bd||f.F,A), hyper=bp.dot(pd)<0, wB=hyper?0:smooth(.02,.3,bm);
+    let Bv=bm>1e-4?bp.normalize().multiplyScalar(wB).addScaledVector(pd,1-wB):pd; if(Bv.length()<1e-3) Bv=pd; Bv=perp(Bv,A);
+    const R=basisQ(A,Bv,new T.Vector3().crossVectors(A,Bv)).multiply(basisQ(A0,B0,new T.Vector3().crossVectors(A0,B0)).invert());
+    UA.quaternion.copy(wq(UA.parent).invert().multiply(R.multiply(wq(UA)))); UA.updateWorldMatrix(false,true);
+    aim(LA,HD,fw);
+    aim(HD,BN['middle_01_'+s],a.hd||fw);
+    const gt=J.gtype, fd=fw.clone().normalize(), sg=i?-1:1; a.tw=0;
     if(gt){
       const want=gt==='pro'?X.clone().multiplyScalar(sg):gt==='sup'?X.clone().multiplyScalar(-sg):gt==='proL'?f.L.clone().multiplyScalar(sg):gt==='dbz'?V(0,0,-1):new T.Vector3().crossVectors(fd,X).negate();
-      if(Math.abs(want.dot(fd))<.95){const k=wp(BN['pinky_01_'+s]).sub(wp(BN['index_01_'+s])); twist(BN['lowerarm_'+s],fd,k,want)}
+      if(Math.abs(want.dot(fd))<.95){const k=perp(wp(BN['pinky_01_'+s]).sub(wp(BN['index_01_'+s])),fd), w2=perp(want,fd);
+        let ang=Math.acos(cl1(k.dot(w2))); if(new T.Vector3().crossVectors(k,w2).dot(fd)<0) ang=-ang;
+        a.tw=Math.round(ang*180/Math.PI); ang=Math.max(-rad(100),Math.min(rad(100),ang));
+        twistA(LA,fd,ang*.5); twistA(HD,fd,ang*.5)}
     }
   });
   J.legs.forEach((l,i)=>{const s=i?'r':'l', sd=l.a.clone().sub(l.k).normalize();
@@ -284,7 +294,7 @@ function placeBody(J){
     aim(BN['foot_'+s],BN['ball_'+s],toe.clone().sub(l.a));
   });
   const g=J.grip==null?1:J.grip;
-  CURL.forEach(c=>{const ang=g*c.amt*(c.seg===1?1.15:c.seg===2?1.45:1.0); c.b.quaternion.copy(BIND[c.b.name]).multiply(new T.Quaternion().setFromAxisAngle(c.ax,ang))});
+  CURL.forEach(c=>{const ang=g*c.amt*(c.seg===1?.95:c.seg===2?1.2:.8); c.b.quaternion.copy(BIND[c.b.name]).multiply(new T.Quaternion().setFromAxisAngle(c.ax,ang))});
   MODEL.updateMatrixWorld(true);
   J.arms.forEach((a,i)=>{const s=i?'r':'l', fd=wp(BN['middle_01_'+s]).sub(wp(BN['hand_'+s])).normalize();
     const i1=wp(BN['index_01_'+s]), p1=wp(BN['pinky_01_'+s]), kn=mid(i1,p1), palm=perp(wp(BN['middle_02_'+s]).sub(wp(BN['middle_01_'+s])),fd);
@@ -317,7 +327,7 @@ const lyingLegs=f=>[1,-1].map(s=>{const k=at(f.hip(s),V(s*.06,-.05,.41)); return
 const P={
 pull:{
  build(){[-1,1].forEach(s=>{B.cyl(V(s*.95,0,0),V(s*.95,2.6,0),.035,'mach'); B.box([.12,.03,.5],V(s*.95,.015,0),'mach')}); B.cyl(V(-1,2.5,0),V(1,2.5,0),.02,'metal')},
- pose(p){const by=2.5,[U,F]=tilt(-lerp(0,10,p)), sc=V(0,lerp(by-.53,by-.13,p),0), f=frame(at(sc,U,-DIM.sh.u),U,F);
+ pose(p){const by=2.5,[U,F]=tilt(-lerp(0,10,p)), sc=V(0,lerp(by-.53,by-.2,p),0), f=frame(at(sc,U,-DIM.sh.u),U,F);
    const arms=[1,-1].map(s=>arm(f,s,V(s*.4,by,0),V(s,-.5,.3)));
    const legs=[1,-1].map(s=>{const k=at(f.hip(s),V(s*.02,-.94,.33).normalize(),LEN.th); return {h:f.hip(s),k,a:at(k,V(0,-.83,-.55).normalize(),LEN.sh)}});
    return {f,arms,legs}}},
@@ -336,33 +346,33 @@ rdelt:{
    B.dyn('pad',()=>B.mkBox([.36,.44,.07],'pad')); B.dyn('stem',()=>B.mkCyl(.025,'metal'));
    ['lvL','lvR','hdL','hdR'].forEach(k=>B.dyn(k,()=>B.mkCyl(k[0]==='l'?.022:.02,k[0]==='l'?'metal':'mach')))},
  pose(p){const [U,F]=tilt(12), f=frame(V(0,.52,0),U,F), ph=rad(lerp(10,80,p));
-   const arms=[1,-1].map(s=>{const d=V(s*Math.sin(ph),-.05,Math.cos(ph)).normalize(); return arm(f,s,at(f.sh(s),d,(LEN.ua+LEN.fa)*.95),V(s*.6,.5,-.5))});
+   const arms=[1,-1].map(s=>{const d=V(s*Math.sin(ph),-.05,Math.cos(ph)).normalize(); return arm(f,s,at(f.sh(s),d,(LEN.ua+LEN.fa)*.95),V(s*.5,-.8,-.2))});
    return {f,arms,legs:seatedLegs(f)}},
  dyn(J,D){const f=J.f; B.place(D.pad,f.at(0,.33,.2),[f.L,f.U,f.F]); B.seg(D.stem,f.at(0,.33,.24),V(0,f.at(0,.33,0).y,.6));
    J.arms.forEach((a,i)=>{const hd=B.grip(a), y=f.sL.y+.16, k=i?'R':'L'; B.seg(D['lv'+k],V(0,y,.6),V(hd.x,y,hd.z)); B.seg(D['hd'+k],V(hd.x,y,hd.z),V(hd.x,hd.y-.08,hd.z))})}},
 lat:{
  build(){dumbbells(['aL','bL','hL','aR','bR','hR'])},
  pose(p){const f=frame(V(0,.98,0),Y,V(0,0,1)), th=rad(lerp(8,86,p)), sc=rad(15);
-   const arms=[1,-1].map(s=>{const d=V(s*Math.sin(th)*Math.cos(sc),-Math.cos(th),Math.sin(th)*Math.sin(sc)).normalize(); return arm(f,s,at(f.sh(s),d,(LEN.ua+LEN.fa)*.95),V(0,1,-.4))});
+   const arms=[1,-1].map(s=>{const d=V(s*Math.sin(th)*Math.cos(sc),-Math.cos(th),Math.sin(th)*Math.sin(sc)).normalize(); return arm(f,s,at(f.sh(s),d,(LEN.ua+LEN.fa)*.95),V(0,.25,-1))});
    return {f,arms,legs:standLegs(f)}},
  dyn(J,D){J.arms.forEach((a,i)=>placeDumbbell(D,i?'R':'L',B.grip(a),a.kax||V(0,0,1)))}},
 preacher:{
- build(){const J=P.preacher.pose(0), du=P.preacher.du, nrm=V(0,.78,.62);
-   const c=mid(mid(J.arms[0].s,J.arms[0].e,.6),mid(J.arms[1].s,J.arms[1].e,.6));
-   const pc=at(c,nrm,-.065); B.obox([.5,.36,.06],pc,[X,du,nrm],'pad'); B.cyl(at(pc,nrm,-.04),V(0,0,pc.z+.05),.03,'metal');
+ build(){const J=P.preacher.pose(0), du=P.preacher.du, nrm=V(0,.89,.45).normalize();
+   const c=at(mid(J.arms[0].s,J.arms[1].s),du,.29);
+   const pc=at(c,nrm,-.085); B.obox([.5,.26,.07],pc,[X,du,nrm.clone().negate()],'pad'); B.cyl(at(pc,nrm,-.04),V(0,0,pc.z+.05),.03,'metal');
    B.box([.38,.07,.34],V(0,.47,-.08),'pad'); B.cyl(V(0,0,-.08),V(0,.44,-.08),.035,'metal'); B.box([.6,.04,.9],V(0,.02,.12),'pad'); mkBarbell(.09)},
  du:null,
- pose(p){const [U,F]=tilt(14), f=frame(V(0,.56,-.04),U,F); const du=P.preacher.du||(P.preacher.du=V(0,-.62,.78).normalize());
-   const ph=rad(lerp(-36,76,p));
-   const arms=[1,-1].map(s=>{const sh=f.sh(s), e=at(sh,du,LEN.ua,X,-s*.035), fd=V(-s*.1,Math.sin(ph),Math.cos(ph)).normalize(); return {s:sh,e,w:at(e,fd,LEN.fa)}});
+ pose(p){const [U,F]=tilt(14), f=frame(V(0,.56,-.04),U,F); const du=P.preacher.du||(P.preacher.du=V(0,-.45,.89).normalize());
+   const ph=rad(lerp(-22,56,p));
+   const arms=[1,-1].map(s=>{const sh=f.sh(s), e=at(sh,du,LEN.ua,X,-s*.035), fd=V(-s*.1,Math.sin(ph),Math.cos(ph)).normalize(); return {s:sh,e,w:at(e,fd,LEN.fa),bd:V(0,.89,.45)}});
    return {f,arms,legs:seatedLegs(f)}},
  dyn(J,D){const c=mid(B.grip(J.arms[0]),B.grip(J.arms[1])); barbell(D,c,.62)}},
 hammer:{
  build(){B.box([.38,.07,.42],V(0,.44,.02),'pad'); B.cyl(V(0,0,0),V(0,.41,0),.035,'metal'); B.box([.55,.04,.7],V(0,.025,0),'pad');
    const [U,F]=tilt(-8); B.obox([.38,.66,.06],at(V(0,.53,-.02),U,.33,F,-.15),[X,U,F],'pad'); dumbbells(['hL','hR','aL','bL','aR','bR'])},
  pose(p){const [U,F]=tilt(-8), f=frame(V(0,.53,-.02),U,F);
-   const th=rad(lerp(6,128,p)), d=V(0,-Math.cos(th),Math.sin(th)), ax=V(0,Math.sin(th),Math.cos(th));
-   const arms=[1,-1].map(s=>{const sh=f.sh(s), e=at(sh,V(s*.012,-1,.02).normalize(),LEN.ua); return {s:sh,e,w:at(e,d,LEN.fa),ax,d}});
+   const th=rad(lerp(6,124,p)), ax=V(0,Math.sin(th),Math.cos(th));
+   const arms=[1,-1].map(s=>{const sh=f.sh(s), e=at(sh,V(s*.13,-1,.02).normalize(),LEN.ua), d=V(s*.2*(1-p),-Math.cos(th),Math.sin(th)).normalize(); return {s:sh,e,w:at(e,d,LEN.fa),ax,d,bd:f.F}});
    return {f,arms,legs:seatedLegs(f)}},
  dyn(J,D){J.arms.forEach((a,i)=>placeDumbbell(D,i?'R':'L',B.grip(a),a.kax||a.ax))}},
 bench:{
@@ -377,8 +387,8 @@ incline:{
    dumbbells(['hL','hR','aL','bL','aR','bR'])},
  ax(){return [V(0,Math.sin(rad(40)),-Math.cos(rad(40))),V(0,Math.cos(rad(40)),Math.sin(rad(40)))]},
  pose(p){const [U,F]=P.incline.ax(), f=frame(V(0,.56,.05),U,F);
-   const arms=[1,-1].map(s=>{const sh=f.sh(s), bot=at(sh,f.F,.06,f.L,s*.14,f.U,-.05), top=at(sh,f.F,(LEN.ua+LEN.fa)*.9,f.L,-s*.05);
-     return arm(f,s,mid(bot,top,p),at(V(0,0,0),f.F,-1,f.L,s*1.1,f.U,-.2))});
+   const arms=[1,-1].map(s=>{const sh=f.sh(s), bot=at(sh,f.L,s*.24,f.F,.11,f.U,.05), top=at(sh,f.F,.47,f.U,.12,f.L,-s*.04);
+     return arm(f,s,mid(bot,top,ease(p)),at(V(0,0,0),f.F,-1,f.L,s*.9,f.U,-.6))});
    return {f,arms,legs:[1,-1].map(s=>leg(f,s,V(s*.2,.09,.62),V(s*.1,.7,.7)))}},
  dyn(J,D){J.arms.forEach((a,i)=>placeDumbbell(D,i?'R':'L',B.grip(a),a.kax||J.f.L))}},
 fly:{
@@ -386,20 +396,20 @@ fly:{
    B.box([.4,.72,.07],V(0,.86,-.17),'pad'); B.box([.16,1.9,.14],V(0,.95,-.36),'mach'); B.box([.8,.08,.12],V(0,1.62,-.3),'mach');
    ['lvL','lvR','hdL','hdR'].forEach(k=>B.dyn(k,()=>B.mkCyl(k[0]==='l'?.022:.02,k[0]==='l'?'metal':'mach')))},
  pose(p){const f=frame(V(0,.52,0),Y,V(0,0,1)), ph=rad(lerp(80,12,p));
-   const arms=[1,-1].map(s=>{const d=V(s*Math.sin(ph),-.08,Math.cos(ph)).normalize(); return arm(f,s,at(f.sh(s),d,(LEN.ua+LEN.fa)*.92),V(s*.5,-.4,-.6))});
+   const arms=[1,-1].map(s=>{const d=V(s*Math.sin(ph),-.08,Math.cos(ph)).normalize(); return arm(f,s,at(f.sh(s),d,(LEN.ua+LEN.fa)*.92),V(s*.3,-1,-.3))});
    return {f,arms,legs:seatedLegs(f)}},
  dyn(J,D){const y=J.f.sL.y+.2; J.arms.forEach((a,i)=>{const s=i?-1:1, k=i?'R':'L', hd=B.grip(a); B.seg(D['lv'+k],V(s*.3,y,-.28),V(hd.x,y,hd.z)); B.seg(D['hd'+k],V(hd.x,y,hd.z),V(hd.x,hd.y-.07,hd.z))})}},
 skull:{
  build(){flatBench(); mkBarbell(.13)},
  pose(p){const f=LYING(), a0=Math.atan2(.3,.95), du=at(V(0,0,0),f.F,Math.cos(a0),f.U,Math.sin(a0)).normalize(), bend=rad(lerp(112,4,p));
-   const arms=[1,-1].map(s=>{const sh=f.sh(s), e=at(sh,du,LEN.ua,f.L,-s*.05), fd=at(V(0,0,0),f.F,Math.cos(a0+bend),f.U,Math.sin(a0+bend),f.L,-s*.06).normalize(); return {s:sh,e,w:at(e,fd,LEN.fa)}});
+   const arms=[1,-1].map(s=>{const sh=f.sh(s), e=at(sh,du,LEN.ua,f.L,-s*.05), fd=at(V(0,0,0),f.F,Math.cos(a0+bend),f.U,Math.sin(a0+bend),f.L,-s*.06).normalize(); return {s:sh,e,w:at(e,fd,LEN.fa),bd:f.U}});
    return {f,arms,legs:lyingLegs(f)}},
  dyn(J,D){barbell(D,mid(B.grip(J.arms[0]),B.grip(J.arms[1])),.62)}},
 pushdown:{
  build(){B.box([.2,2.25,.18],V(0,1.12,.78),'mach'); B.cyl(V(-.04,2.06,.66),V(.04,2.06,.66),.055,'metal'); B.box([.7,.04,.6],V(0,.02,.7),'mach');
    B.dyn('cable',()=>B.mkCyl(.007,'metal')); B.dyn('rL',()=>B.mkCyl(.016,'pad')); B.dyn('rR',()=>B.mkCyl(.016,'pad'))},
  pose(p){const [U,F]=tilt(10), f=frame(V(0,.98,0),U,F), ph=rad(lerp(16,-92,p));
-   const arms=[1,-1].map(s=>{const sh=f.sh(s), e=at(sh,V(-s*.03,-1,.14).normalize(),LEN.ua), fd=V(s*.16*p,Math.sin(ph),Math.cos(ph)).normalize(); return {s:sh,e,w:at(e,fd,LEN.fa)}});
+   const arms=[1,-1].map(s=>{const sh=f.sh(s), e=at(sh,V(-s*.03,-1,.14).normalize(),LEN.ua), fd=V(s*.16*p,Math.sin(ph),Math.cos(ph)).normalize(); return {s:sh,e,w:at(e,fd,LEN.fa),bd:f.F}});
    return {f,arms,legs:standLegs(f)}},
  dyn(J,D){const gL=B.grip(J.arms[0]), gR=B.grip(J.arms[1]), rc=at(mid(gL,gR),V(0,1,0),.1); B.seg(D.cable,V(0,2.02,.64),rc); B.seg(D.rL,rc,at(gL,dirTo(rc,gL),.045)); B.seg(D.rR,rc,at(gR,dirTo(rc,gR),.045))}},
 rower:{
@@ -408,7 +418,7 @@ rower:{
    [1,-1].forEach(s=>{const fp=B.mkBox([.13,.04,.3],'pad'); fp.position.copy(V(s*.12,.34,.84)); fp.rotation.x=-.75});
    B.dyn('seat',()=>B.mkBox([.32,.06,.32],'pad')); B.dyn('hb',()=>B.mkCyl(.016,'pad')); B.dyn('ch',()=>B.mkCyl(.006,'metal'))},
  pose(p){const lp=ease(clamp(p/.6)), bp=ease(clamp((p-.3)/.5)), ap=ease(clamp((p-.55)/.45));
-   const z=lerp(.3,-.22,lp), [U,F]=tilt(lerp(24,-14,bp)), f=frame(V(0,.42,z),U,F);
+   const z=lerp(.12,-.22,lp), [U,F]=tilt(lerp(24,-14,bp)), f=frame(V(0,.42,z),U,F);
    const sc=mid(f.sL,f.sR), start=at(sc,V(0,-.16,1).normalize(),(LEN.ua+LEN.fa)*.96), fin=f.at(0,.28,.17), hc=mid(start,fin,ap);
    const arms=[1,-1].map(s=>arm(f,s,at(hc,X,s*.11),V(s*.3,-.6,-1)));
    const legs=[1,-1].map(s=>leg(f,s,V(s*.12,.32,.8),V(s*.12,1,.15)));
@@ -521,7 +531,7 @@ function frameOnce(){
   if(J.gtype===undefined) J.gtype=GRIP[meta.id]||null;
   placeBody(J);
   // corrige el brazo para que el centro del puño (no la muñeca) quede sobre la barra o la manija
-  for(let it=0;it<2;it++){let moved=false;
+  for(let it=0;it<4;it++){let moved=false;
     J.arms.forEach(a=>{if(!a.t||!a.grip) return; const err=a.grip.clone().sub(a.t); if(err.length()<.003) return;
       a.tc.sub(err); const r=ik(a.s,a.tc,LEN.ua,LEN.fa,a.pole); a.e=r.j; a.w=r.e; moved=true});
     if(!moved) break; placeBody(J)} const arr=actU.value; arr.fill(0); Object.entries(meta.work).forEach(([g,w])=>{if(MG[g]) arr[MG[g]]=w*(.38+.62*p)});
@@ -545,7 +555,7 @@ new MutationObserver(retheme).observe(document.documentElement,{attributes:true,
 return {
   attach(host){if(st.host===host) return; st.host=host; buildUI(host)},
   show, start(){if(st.run) return; st.run=true; st.last=null; st.raf=requestAnimationFrame(loop)}, stop(){st.run=false; cancelAnimationFrame(st.raf)},
-  play(b){st.playing=b; sync()}, camO(c){st.camO=c}, grips(){return st.lastJ?st.lastJ.arms.map(a=>a.grip&&a.grip.toArray()):[]}, slow(b){st.slow=b; sync()}, setClock(c){st.clock=c}, frame:frameOnce, dims:()=>({LEN,DIM})
+  play(b){st.playing=b; sync()}, camO(c){st.camO=c}, grips(){return st.lastJ?st.lastJ.arms.map(a=>a.grip&&a.grip.toArray()):[]}, twists(){return st.lastJ?st.lastJ.arms.map(a=>a.tw):[]}, gerr(){return st.lastJ?st.lastJ.arms.map(a=>a.t&&a.grip?Math.round(a.grip.distanceTo(a.t)*1000):-1):[]}, slow(b){st.slow=b; sync()}, setClock(c){st.clock=c}, frame:frameOnce, dims:()=>({LEN,DIM})
 };
 }
 A3.mount=async host=>{const e=await A3.load(); e.attach(host); return e};
