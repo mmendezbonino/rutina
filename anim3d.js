@@ -333,7 +333,20 @@ function placeBody(J){
     const i1=wp(BN['index_01_'+s]), p1=wp(BN['pinky_01_'+s]), kn=mid(i1,p1), palm=perp(wp(BN['middle_02_'+s]).sub(wp(BN['middle_01_'+s])),fd);
     const ring=[]; ['index','middle','ring','pinky'].forEach(fn=>['01','02','03'].forEach(k=>ring.push(wp(BN[fn+'_'+k+'_'+s]))));
     const cen=ring.reduce((acc,v)=>acc.add(v),new T.Vector3()).multiplyScalar(1/ring.length);
-    a.grip=at(kn,fd,-.008,palm,.03); a.cen=cen; a.kax=p1.clone().sub(i1).normalize()});
+    a.grip=at(kn,fd,-.008,palm,.03); a.cen=cen; a.kax=p1.clone().sub(i1).normalize();
+    // pulgar: rodea la barra por el lado opuesto a los dedos y apoya la punta sobre el índice
+    if(J.gtype&&g>.8){const c=a.grip, k=a.kax, rad0=X0=>{const d=X0.clone().sub(c); return d.addScaledVector(k,-d.dot(k))};
+      const i2=wp(BN['index_02_'+s]), t1=wp(BN['thumb_01_'+s]), sideK=-1;
+      const along=i2.clone().sub(c).dot(k)+sideK*.006, rI=rad0(i2), rT=rad0(t1);
+      // punta: sobre la falange media del índice, un poco por fuera
+      const T0=at(c,k,along,rI.clone().normalize(),Math.max(.03,rI.length()+.006));
+      // nudillo del pulgar: a mitad de camino, abierto hacia afuera de la barra
+      const mm=mid(t1,T0), rm=rad0(mm), M=at(c,k,mm.clone().sub(c).dot(k),rm.lengthSq()>1e-6?rm.normalize():rT.normalize(),.036);
+      aim(BN['thumb_01_'+s],BN['thumb_02_'+s],M.clone().sub(t1));
+      const t2=wp(BN['thumb_02_'+s]); aim(BN['thumb_02_'+s],BN['thumb_03_'+s],mid(t2,T0,.6).sub(t2).add(rad0(mid(t2,T0,.6)).normalize().multiplyScalar(.004)));
+      const t3=wp(BN['thumb_03_'+s]); aim(BN['thumb_03_'+s],BN['thumb_04_leaf_'+s],T0.clone().sub(t3));
+    }
+  });
 }
 
 // ----- utilería -----
