@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--accent);color:var(--on-accent);cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.10.14-2";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.10.14-3";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -362,13 +362,14 @@ async function finishWorkout(){
 // ---------- clocks ----------
 function startClock(){ stopClock(); startClock._i=setInterval(()=>{const el=document.getElementById('clock'); if(el&&S.workout) el.textContent=hms(Date.now()-S.workout.started)},1000) }
 function stopClock(){ clearInterval(startClock._i) }
-let audioCtx=null;
 // ---------- temporizador de descanso ----------
 // Cuenta contra la hora real, así que nunca se atrasa. Con la app abierta mantiene la pantalla encendida.
 // Con la pantalla apagada o en otra app, el service worker espera el fin del descanso y manda la notificación
 // (sin reproducir audio, para no bajar ni cortar la música del celular).
 const TM={wake:null,notifAsked:false}; window.__tm={get S(){return S},TM};
-function beep(){try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume(); [0,0.25,0.5].forEach(t=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.frequency.value=880; g.gain.value=.18; o.connect(g); g.connect(audioCtx.destination); o.start(audioCtx.currentTime+t); o.stop(audioCtx.currentTime+t+.15)})}catch(e){} try{navigator.vibrate&&navigator.vibrate([300,120,300,120,300])}catch(e){}}
+function beep(){ // abre el audio solo para el pitido y lo cierra enseguida, así no le baja el volumen a la música
+  try{const ctx=new (window.AudioContext||window.webkitAudioContext)(); [0,0.25,0.5].forEach(t=>{const o=ctx.createOscillator(),g=ctx.createGain(); o.frequency.value=880; g.gain.value=.18; o.connect(g); g.connect(ctx.destination); o.start(ctx.currentTime+t); o.stop(ctx.currentTime+t+.15)}); setTimeout(()=>{try{ctx.close()}catch(e){}},900)}catch(e){}
+  try{navigator.vibrate&&navigator.vibrate([300,120,300,120,300])}catch(e){}}
 async function wakeLock(on){try{ if(on){ if(!TM.wake&&navigator.wakeLock&&document.visibilityState==='visible'){TM.wake=await navigator.wakeLock.request('screen'); TM.wake.addEventListener('release',()=>{TM.wake=null})} } else if(TM.wake){await TM.wake.release(); TM.wake=null} }catch(e){TM.wake=null}}
 function askNotif(){ if(TM.notifAsked||!('Notification' in window)||Notification.permission!=='default') return; TM.notifAsked=true; try{Notification.requestPermission()}catch(e){} }
 async function notifyDone(){
