@@ -1,5 +1,5 @@
 // Service worker de Cuaderno de Rutina: guarda la app para abrir rápido y sin conexión.
-const VERSION='2026.10.09-7';
+const VERSION='2026.10.14-1';
 const CACHE='rutina-'+VERSION;
 const ASSETS=['./','index.html','anim3d.js','male.glb','lib/three.min.js','lib/GLTFLoader.js','manifest.webmanifest',
   'icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png','icons/apple-touch-icon.png'];
@@ -15,3 +15,6 @@ self.addEventListener('fetch',e=>{
     e.respondWith(caches.open('rutina-fonts').then(c=>c.match(r).then(hit=>{const net=fetch(r).then(res=>{c.put(r,res.clone()); return res}).catch(()=>hit); return hit||net})));
   }
 });
+
+// tocar la notificación de fin de descanso abre la app
+self.addEventListener('notificationclick',e=>{e.notification.close(); e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{const c=cs[0]; return c?c.focus():self.clients.openWindow('./')}))});
