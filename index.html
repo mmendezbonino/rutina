@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--accent);color:var(--on-accent);cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.10.14-1";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.10.14-2";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -364,29 +364,11 @@ function startClock(){ stopClock(); startClock._i=setInterval(()=>{const el=docu
 function stopClock(){ clearInterval(startClock._i) }
 let audioCtx=null;
 // ---------- temporizador de descanso ----------
-// Cuenta contra la hora real, así que nunca se atrasa. Para avisar con la pantalla apagada o en otra app:
-// mantiene la pantalla encendida mientras la app está abierta, sigue vivo en segundo plano con un audio
-// inaudible (aparece como reproducción en la pantalla de bloqueo con el tiempo restante) y al terminar
-// suena, vibra y manda una notificación.
-const TM={wake:null,keep:null,notifAsked:false}; window.__tm={get S(){return S},TM};
+// Cuenta contra la hora real, así que nunca se atrasa. Con la app abierta mantiene la pantalla encendida.
+// Con la pantalla apagada o en otra app, el service worker espera el fin del descanso y manda la notificación
+// (sin reproducir audio, para no bajar ni cortar la música del celular).
+const TM={wake:null,notifAsked:false}; window.__tm={get S(){return S},TM};
 function beep(){try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume(); [0,0.25,0.5].forEach(t=>{const o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.frequency.value=880; g.gain.value=.18; o.connect(g); g.connect(audioCtx.destination); o.start(audioCtx.currentTime+t); o.stop(audioCtx.currentTime+t+.15)})}catch(e){} try{navigator.vibrate&&navigator.vibrate([300,120,300,120,300])}catch(e){}}
-function quietWav(){ // 1 s de audio casi silencioso (inaudible) para que el sistema no duerma la app
-  const sr=8000,n=sr,buf=new ArrayBuffer(44+n*2),v=new DataView(buf),w=(o,t)=>{for(let i=0;i<t.length;i++) v.setUint8(o+i,t.charCodeAt(i))};
-  w(0,'RIFF'); v.setUint32(4,36+n*2,true); w(8,'WAVEfmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
-  v.setUint32(24,sr,true); v.setUint32(28,sr*2,true); v.setUint16(32,2,true); v.setUint16(34,16,true); w(36,'data'); v.setUint32(40,n*2,true);
-  for(let i=0;i<n;i++) v.setInt16(44+i*2,(i%2?3:-3),true);
-  return URL.createObjectURL(new Blob([buf],{type:'audio/wav'}));
-}
-function keepAlive(on){
-  try{
-    if(on){
-      if(!TM.keep){TM.keep=new Audio(quietWav()); TM.keep.loop=true; TM.keep.volume=1; TM.keep.setAttribute('playsinline','')}
-      TM.keep.play().catch(()=>{});
-      if('mediaSession' in navigator){navigator.mediaSession.metadata=new MediaMetadata({title:'Descanso',artist:'Cuaderno de rutina',artwork:[{src:'icons/icon-192.png',sizes:'192x192',type:'image/png'}]});
-        try{navigator.mediaSession.setActionHandler('pause',()=>{stopTimer()}); navigator.mediaSession.setActionHandler('play',()=>{})}catch(e){}}
-    } else if(TM.keep){TM.keep.pause(); if('mediaSession' in navigator){try{navigator.mediaSession.metadata=null; navigator.mediaSession.playbackState='none'}catch(e){}}}
-  }catch(e){}
-}
 async function wakeLock(on){try{ if(on){ if(!TM.wake&&navigator.wakeLock&&document.visibilityState==='visible'){TM.wake=await navigator.wakeLock.request('screen'); TM.wake.addEventListener('release',()=>{TM.wake=null})} } else if(TM.wake){await TM.wake.release(); TM.wake=null} }catch(e){TM.wake=null}}
 function askNotif(){ if(TM.notifAsked||!('Notification' in window)||Notification.permission!=='default') return; TM.notifAsked=true; try{Notification.requestPermission()}catch(e){} }
 async function notifyDone(){
@@ -395,15 +377,15 @@ async function notifyDone(){
     const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration(); if(reg) reg.showNotification('Descanso terminado',opt); else new Notification('Descanso terminado',opt);
   }catch(e){}
 }
-function startTimer(sec){ if(!sec) return; try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==='suspended') audioCtx.resume()}catch(e){}
-  S.timer={end:Date.now()+sec*1000,total:sec}; askNotif(); keepAlive(true); wakeLock(true); tick(); }
-function stopTimer(){S.timer=null; clearInterval(tick._i); tick._i=null; document.getElementById('timer').hidden=true; keepAlive(false); wakeLock(false)}
+function swTimer(){try{const c=navigator.serviceWorker&&navigator.serviceWorker.controller; if(c) c.postMessage(S.timer?{type:'rest',end:S.timer.end}:{type:'rest-cancel'})}catch(e){}}
+function startTimer(sec){ if(!sec) return;
+  S.timer={end:Date.now()+sec*1000,total:sec}; askNotif(); wakeLock(true); swTimer(); tick(); }
+function stopTimer(){S.timer=null; clearInterval(tick._i); tick._i=null; document.getElementById('timer').hidden=true; wakeLock(false); swTimer()}
 function tick(){
   const el=document.getElementById('timer');
   if(!S.timer){el.hidden=true;return}
   const left=(S.timer.end-Date.now())/1000;
-  if(left<=0){const hidden=document.visibilityState!=='visible'; beep(); stopTimer(); if(hidden) notifyDone(); else toast('Descanso terminado'); return}
-  try{ if('mediaSession' in navigator&&navigator.mediaSession.setPositionState){navigator.mediaSession.metadata&&(navigator.mediaSession.metadata.title='Descanso · '+mmss(left)); navigator.mediaSession.setPositionState({duration:S.timer.total,position:Math.min(S.timer.total,Math.max(0,S.timer.total-left)),playbackRate:1})} }catch(e){}
+  if(left<=0){const hidden=document.visibilityState!=='visible', sw=!!(navigator.serviceWorker&&navigator.serviceWorker.controller); S.timer=null; clearInterval(tick._i); tick._i=null; el.hidden=true; wakeLock(false); if(!hidden){beep(); toast('Descanso terminado')} else if(!sw) notifyDone(); return}
   el.hidden=false; el.className='timer';
   el.innerHTML=`<div class="timer-in" role="timer" aria-live="off"><div class="timer-l"><span>Descanso</span><div class="timer-time">${mmss(left)}</div><div class="timer-bar"><i style="width:${(left/S.timer.total*100).toFixed(1)}%"></i></div></div><button class="btn sm" data-act="t-">−15</button><button class="btn sm" data-act="t+">+15</button><button class="btn sm primary" data-act="tskip">Saltar</button></div>`;
   if(!tick._i) tick._i=setInterval(tick,250);
@@ -678,8 +660,8 @@ document.addEventListener('click',async ev=>{
     case 'finishno': S.confirmFinish=false; render(); break;
     case 'finish2': await finishWorkout(); break;
     case 'discard': S.workout=null; S.confirmFinish=false; stopTimer(); stopClock(); saveDraft(); toast('Entrenamiento descartado'); render(); break;
-    case 't+': if(S.timer){S.timer.end+=15000; S.timer.total+=15; tick()} break;
-    case 't-': if(S.timer){S.timer.end-=15000; tick()} break;
+    case 't+': if(S.timer){S.timer.end+=15000; S.timer.total+=15; swTimer(); tick()} break;
+    case 't-': if(S.timer){S.timer.end-=15000; swTimer(); tick()} break;
     case 'tskip': stopTimer(); break;
     case 'opens': S.openSess=S.openSess===t.dataset.id?null:t.dataset.id; S.confirmDel=null; render(); break;
     case 'del': S.confirmDel=t.dataset.id; render(); break;
