@@ -38,6 +38,9 @@ const META=[
  {id:'skull',name:'Skull crusher con barra',main:['Tríceps'],sec:['Cabeza larga del tríceps'],lab:['Extendé','Bajá controlado'],work:{triceps:1},
   cam:{yaw:62,pitch:26,dist:3.2,ty:.72,tz:-.3},cue:'Acostado en banco plano, brazos hacia el techo y un poco inclinados hacia la cabeza.',
   steps:['Agarre cerrado, a la altura de los hombros, con los codos apuntando al techo.','Bajá la barra doblando solo los codos hasta cerca de la frente.','Extendé los brazos sin abrir los codos ni mover los hombros.']},
+ {id:'dips',name:'Fondos en paralelas',main:['Tríceps'],sec:['Pectoral inferior','Deltoide anterior'],lab:['Subí','Bajá controlado'],work:{triceps:1,pec:.5,deltF:.45},
+  cam:{yaw:58,pitch:10,dist:4.2,ty:1.25,tz:0},cue:'Apoyado en las paralelas con los brazos extendidos, torso casi vertical y rodillas flexionadas.',
+  steps:['Arrancá arriba con los brazos extendidos y los hombros abajo, lejos de las orejas.','Bajá doblando los codos hacia atrás, pegados al cuerpo, hasta que el brazo quede paralelo al piso.','Empujá hasta casi extender los brazos, con el torso vertical para cargar el tríceps.']},
  {id:'pushdown',name:'Pushdown con soga',main:['Tríceps'],sec:['Antebrazo'],lab:['Empujá','Volvé controlado'],work:{triceps:1,forearm:.25},
   cam:{yaw:62,pitch:10,dist:3.5,ty:1.12,tz:.2},cue:'De pie frente a la polea alta, torso apenas inclinado y codos pegados al cuerpo.',
   steps:['Agarrá la soga con las palmas enfrentadas y los codos al costado del torso.','Extendé los codos hacia abajo y separá los extremos de la soga al final.','Volvé hasta que los antebrazos queden paralelos al piso, sin mover los codos.']},
@@ -72,8 +75,8 @@ const META=[
 A3.list=META;
 A3.meta=id=>META.find(m=>m.id===id)||null;
 // ids de la app → animación; si no hay, se busca por nombre
-const BY_APP={dom:'pull',remov:'row',rdelt:'rdelt',lat1:'lat',lat2:'lat',pred:'preacher',mart:'hammer',banca:'bench',incl:'incline',apert:'fly',skull:'skull',push:'pushdown',remo:'rower',hack:'hack',prensa:'press',gem:'calfpress',hiper:'hyper',femsen:'legcurl',ext:'legext',abdm:'abd',addm:'add'};
-const BY_NAME=[[/(gemelo|pantorr|calf).*prensa|prensa.*(gemelo|pantorr)/,'calfpress'],[/cu[aá]driceps|extensi[oó]n de pierna/,'legext'],[/femoral|isquio/,'legcurl'],[/skull|franc[eé]s|rompecr/,'skull'],[/pushdown|soga|tr[ií]ceps en polea/,'pushdown'],[/dominad|jal[oó]n|pulldown/,'pull'],[/rear delt|p[aá]jaro|deltoide post|face pull/,'rdelt'],[/remo.*(m[aá]quina.*cardio|cardio|ergo)/,'rower'],[/remo/,'row'],[/abduc/,'abd'],[/aduc/,'add'],[/hiperext|lumbar/,'hyper'],[/hack/,'hack'],[/prensa/,'press'],[/predicador|scott/,'preacher'],[/martillo|hammer/,'hammer'],[/lateral|elevaci/,'lat'],[/inclinad/,'incline'],[/apertura|pec ?deck|cruce/,'fly'],[/press.*banca|banca|bench/,'bench']];
+const BY_APP={fondos:'dips',dom:'pull',remov:'row',rdelt:'rdelt',lat1:'lat',lat2:'lat',pred:'preacher',mart:'hammer',banca:'bench',incl:'incline',apert:'fly',skull:'skull',push:'pushdown',remo:'rower',hack:'hack',prensa:'press',gem:'calfpress',hiper:'hyper',femsen:'legcurl',ext:'legext',abdm:'abd',addm:'add'};
+const BY_NAME=[[/(gemelo|pantorr|calf).*prensa|prensa.*(gemelo|pantorr)/,'calfpress'],[/cu[aá]driceps|extensi[oó]n de pierna/,'legext'],[/femoral|isquio/,'legcurl'],[/skull|franc[eé]s|rompecr/,'skull'],[/fondo|dips|paralelas/,'dips'],[/pushdown|soga|tr[ií]ceps en polea/,'pushdown'],[/dominad|jal[oó]n|pulldown/,'pull'],[/rear delt|p[aá]jaro|deltoide post|face pull/,'rdelt'],[/remo.*(m[aá]quina.*cardio|cardio|ergo)/,'rower'],[/remo/,'row'],[/abduc/,'abd'],[/aduc/,'add'],[/hiperext|lumbar/,'hyper'],[/hack/,'hack'],[/prensa/,'press'],[/predicador|scott/,'preacher'],[/martillo|hammer/,'hammer'],[/lateral|elevaci/,'lat'],[/inclinad/,'incline'],[/apertura|pec ?deck|cruce/,'fly'],[/press.*banca|banca|bench/,'bench']];
 A3.match=ex=>{
   if(!ex) return null;
   if(ex.type==='cardio' && /remo/i.test(ex.name||'')) return 'rower';
@@ -188,7 +191,7 @@ const rel=v=>{const d=v.clone().sub(P0); return {l:d.dot(L0),u:d.dot(U0),f:d.dot
 DIM.sh=rel(sL0); DIM.hip=rel(J0.hL); DIM.neck=rel(nk0);
 LEN.ua=sL0.distanceTo(J0.eL); LEN.fa=J0.eL.distanceTo(wp(BN.hand_l)); LEN.th=J0.hL.distanceTo(J0.kL); LEN.sh=J0.kL.distanceTo(J0.aL); LEN.go=.1; LEN.R=LEN.ua+LEN.fa+LEN.go; // alcance hombro→centro del puño
 const CURL=[];
-const GRIP={pull:'pro',row:'neu',rdelt:'neu',lat:'dbz',preacher:'ez',hammer:'neu',bench:'pro',incline:'proL',fly:'neu',skull:'pro',pushdown:'neu',rower:'pro',hack:'neu',press:'neu',calfpress:'neu',legcurl:'neu',legext:'neu',abd:'neu',add:'neu'};
+const GRIP={pull:'pro',row:'neu',rdelt:'neu',lat:'dbz',preacher:'ez',hammer:'neu',bench:'pro',incline:'proL',fly:'neu',skull:'pro',dips:'dbz',pushdown:'neu',rower:'pro',hack:'neu',press:'neu',calfpress:'neu',legcurl:'neu',legext:'neu',abd:'neu',add:'neu'};
 const cl1=x=>Math.max(-1,Math.min(1,x));
 function twistA(bone,axis,ang){const q=new T.Quaternion().setFromAxisAngle(axis,ang); bone.quaternion.copy(wq(bone.parent).invert().multiply(q.multiply(wq(bone)))); bone.updateWorldMatrix(false,true)}
 function twist(bone,axis,from,to){const a=perp(from,axis), b=perp(to,axis); let ang=Math.acos(cl1(a.dot(b))); if(new T.Vector3().crossVectors(a,b).dot(axis)<0) ang=-ang;
@@ -469,6 +472,13 @@ skull:{
    const arms=[1,-1].map(s=>{const sh=f.sh(s), e=at(sh,du,LEN.ua,f.L,-s*.05), fd=at(V(0,0,0),f.F,Math.cos(a0+bend),f.U,Math.sin(a0+bend),f.L,-s*.06).normalize(); return {s:sh,e,w:at(e,fd,LEN.fa),bd:f.U}});
    return {f,arms,legs:lyingLegs(f)}},
  dyn(J,D){barbell(D,mid(B.grip(J.arms[0]),B.grip(J.arms[1])),.62)}},
+dips:{
+ build(){const y=1.2;[-1,1].forEach(s=>{B.cyl(V(s*.27,y,-.45),V(s*.27,y,.45),.022,'metal'); [-.42,.42].forEach(z=>B.cyl(V(s*.27,0,z),V(s*.27,y,z),.03,'mach')); B.box([.08,.03,1],V(s*.27,.015,0),'mach')}); B.box([.62,.03,.08],V(0,.015,-.42),'mach')},
+ pose(p){const y=1.2, dx=.27-DIM.sh.l, top=Math.sqrt(Math.pow(.99*LEN.R,2)-dx*dx)+.03, bot=Math.sqrt(Math.pow(.66*LEN.R,2)-dx*dx);
+   const [U,F]=tilt(lerp(13,5,p)), sc=V(0,y+lerp(bot,top,p),lerp(.05,.02,p)), f=frame(at(sc,U,-DIM.sh.u),U,F);
+   const arms=[1,-1].map(s=>arm(f,s,V(s*.27,y,0),V(s*.15,.1,-1)));
+   const legs=[1,-1].map(s=>{const k=at(f.hip(s),at(V(0,0,0),f.U,-1,f.F,.32,f.L,s*.03).normalize(),LEN.th); return {h:f.hip(s),k,a:at(k,at(V(0,0,0),f.U,-.55,f.F,-.83,f.L,-s*.1).normalize(),LEN.sh)}});
+   return {f,arms,legs}}},
 pushdown:{
  build(){B.stack('stk',V(0,0,.84),0,2.12,.34); B.box([.46,.08,.3],V(0,2.15,.76),'mach'); B.cyl(V(-.04,2.06,.66),V(.04,2.06,.66),.055,'metal'); B.box([.7,.04,.6],V(0,.02,.7),'mach');
    B.dyn('cable',()=>B.mkCyl(.007,'metal')); B.dyn('rL',()=>B.mkCyl(.016,'pad')); B.dyn('rR',()=>B.mkCyl(.016,'pad'))},
@@ -577,6 +587,7 @@ const LIFE={
  incline:{follow:1,tempo:[1,.3,2,.3],life:p=>({scap:{e:-2,p:-6},scapLock:1,head:{p:8},sway:0})},
  fly:{follow:1,tempo:[1,.55,2.2,.3],life:p=>({scap:{p:lerp(-12,4,p)},sp:{f:lerp(-4,0,p)},stab:.8,sway:.15})},
  skull:{tempo:[1.1,.3,2.3,.2],life:p=>({head:{p:6},sway:0})},
+ dips:{tempo:[1,.3,2,.3],life:p=>({scap:{e:lerp(4,-6,p),p:lerp(5,0,p)},sp:{f:lerp(6,2,p)},head:{p:6},stab:.7,sway:.2})},
  pushdown:{tempo:[.9,.5,2,.3],life:p=>({scap:{e:lerp(0,-4,p)},sp:{f:lerp(4,8,p)},head:{p:8},stab:.8,sway:.8})},
  rower:{follow:1,tempo:[1.05,.1,1.8,.12],life:p=>{const bp=smooth(.22,.85,p), ap=smooth(.48,1,p); return {scap:{p:lerp(6,-10,ap),e:lerp(2,-2,ap)},sp:{f:lerp(10,-2,bp)},stab:.6,sway:.1}}},
  hack:{tempo:[1.2,.2,2.2,.3],life:p=>({head:{p:4},sway:0})},

@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--accent);color:var(--on-accent);cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.10.14-3";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.10.17-1";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -247,7 +247,7 @@ const DEFAULT = {
       {id:'banca',name:'Press banca con barra',type:'fuerza',sets:4,reps:'8-11',weight:60,rest:150},
       {id:'incl',name:'Press inclinado mancuernas',type:'fuerza',sets:3,reps:'10-12',weight:20,rest:120},
       {id:'apert',name:'Aperturas en máquina',type:'fuerza',sets:3,reps:'10-12',weight:60,rest:90},
-      {id:'skull',name:'Skull crusher',type:'fuerza',sets:3,reps:'10-12',weight:20,rest:90},
+      {id:'fondos',name:'Fondos en paralelas',type:'fuerza',sets:3,reps:'8-12',weight:0,rest:120},
       {id:'push',name:'Pushdown con soga',type:'fuerza',sets:3,reps:'10-12',weight:30,rest:75},
       {id:'lat2',name:'Elevaciones laterales',type:'fuerza',sets:3,reps:'15',weight:10,rest:75},
       {id:'remo',name:'Remo (máquina, cardio)',type:'cardio',sets:1,reps:'12',weight:0,rest:0}
@@ -263,7 +263,7 @@ const DEFAULT = {
       {id:'addm',name:'Aductores en máquina',type:'fuerza',sets:3,reps:'15',weight:0,rest:60}
     ]}
   },
-  planVersion: 2,
+  planVersion: 3,
   schedule: {1:'espalda',2:'pecho',3:'piernas',4:'espalda',5:'pecho'}
 };
 
@@ -706,11 +706,13 @@ document.addEventListener('change',async ev=>{
     const p=await S.store.loadPlan();
     if(p){
       S.plan=p;
-      if((p.planVersion||1)<DEFAULT.planVersion){
-        S.plan.routines.piernas=JSON.parse(JSON.stringify(DEFAULT.routines.piernas));
-        S.plan.planVersion=DEFAULT.planVersion;
-        try{await S.store.savePlan(S.plan); setTimeout(()=>toast('Rutina de piernas actualizada'),400)}catch(e){}
+      const v=p.planVersion||1; let msg='';
+      if(v<2){ S.plan.routines.piernas=JSON.parse(JSON.stringify(DEFAULT.routines.piernas)); msg='Rutina de piernas actualizada' }
+      if(v<3){ // skull crusher → fondos en paralelas (se mantiene el resto de la rutina tal cual)
+        const r=S.plan.routines.pecho, i=r?r.exercises.findIndex(e=>e.id==='skull'||/skull/i.test(e.name||'')):-1;
+        if(i>=0){ r.exercises[i]={id:'fondos',name:'Fondos en paralelas',type:'fuerza',sets:3,reps:'8-12',weight:0,rest:120}; msg='Skull crusher cambiado por fondos' }
       }
+      if(v<DEFAULT.planVersion){ S.plan.planVersion=DEFAULT.planVersion; try{await S.store.savePlan(S.plan); if(msg) setTimeout(()=>toast(msg),400)}catch(e){} }
     }
   }catch(e){}
   try{S.sessions=await S.store.loadSessions()}catch(e){S.sessions=[]}
