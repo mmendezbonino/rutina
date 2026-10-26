@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--accent);color:var(--on-accent);cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.10.26-3";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.10.26-4";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -288,7 +288,7 @@ async function makeStore(){
     const sess = prof.collection('sessions');
     return {cloud:true,
       async loadPlan(){const s=await prof.get(); return s.exists && s.data().routines ? JSON.parse(JSON.stringify(s.data())) : null},
-      async savePlan(p){await prof.set({routines:p.routines, schedule:p.schedule, planVersion:p.planVersion||1})},
+      async savePlan(p){await prof.set({routines:p.routines, schedule:p.schedule, planVersion:p.planVersion||1, bodyKg:p.bodyKg||null})},
       async loadSessions(){const q=await sess.orderBy('date','desc').limit(400).get(); return q.docs.map(d=>({...d.data(), _id:d.id}))},
       async addSession(x){await sess.doc(x.id).set(x)},
       async delSession(id){await sess.doc(id).delete()}
@@ -536,11 +536,14 @@ function chart(exId){
   // Con peso: fuerza estimada (1RM, fórmula de Epley), así subir repeticiones con el mismo peso también se ve.
   // Peso corporal (todas las series en 0 kg): repeticiones de la mejor serie.
   const e1=x=>x.w*(1+x.r/30);
+  const name=((S.plan.routines&&Object.values(S.plan.routines).flatMap(r=>r.exercises).find(e=>e.id===exId))||{}).name||'';
+  const isBW=/^(dom|fondos)$/.test(exId)||/dominad|fondo|dips|paralelas/i.test(name), BWk=S.plan.bodyKg||88;
   const raw=S.sessions.slice().reverse().map(s=>{const e=s.entries.find(x=>x.exId===exId); if(!e||!e.sets||!e.sets.length) return null; const ok=e.sets.filter(x=>x.r>0); return ok.length?{d:s.date,sets:ok}:null}).filter(Boolean).slice(-16);
   if(!raw.length) return `<div class="muted" style="font-size:.9rem;padding:8px 0">Sin datos de este ejercicio todavía.</div>`;
-  const bw=raw.every(p=>p.sets.every(x=>!x.w));
+  const bw=raw.every(p=>p.sets.every(x=>!x.w)), lastre=isBW&&!bw;
+  const load=x=>lastre?(BWk+x.w)*(1+x.r/30):e1(x);
   const pts=raw.map(p=>{ if(bw){const best=p.sets.reduce((a,x)=>x.r>a.r?x:a,p.sets[0]); const tot=p.sets.reduce((a,x)=>a+x.r,0); return {d:p.d,w:0,r:best.r,v:tot,tot}}
-    const best=p.sets.reduce((a,x)=>e1(x)>e1(a)?x:a,p.sets[0]); return {d:p.d,w:best.w,r:best.r,v:e1(best)} });
+    const best=p.sets.reduce((a,x)=>load(x)>load(a)?x:a,p.sets[0]); return {d:p.d,w:best.w,r:best.r,v:load(best)} });
   const W=320,H=150,pl=34,pr=12,pt=14,pb=24;
   const vs=pts.map(p=>p.v); let lo=Math.min(...vs), hi=Math.max(...vs); if(lo===hi){lo=Math.max(0,lo-(bw?2:5)); hi=hi+(bw?2:5)} if(bw){lo=Math.floor(lo); hi=Math.ceil(hi); if((hi-lo)%2) hi++}
   const x=i=>pts.length===1?(pl+(W-pl-pr)/2):pl+i*(W-pl-pr)/(pts.length-1);
@@ -552,15 +555,15 @@ function chart(exId){
   const up=diff>0?'var(--ok)':'var(--fg)', sg=diff>0?'+':'';
   const kv=bw
     ? `<div><b>${last.r} reps</b><span>Mejor serie reciente</span></div><div><b style="color:${up}">${sg}${Math.round(diff)} reps</b><span>Totales desde el inicio</span></div>`
-    : `<div><b>${fmtKg(last.w)} kg × ${last.r}</b><span>Mejor serie reciente</span></div><div><b style="color:${up}">${sg}${fmtKg(Math.round(diff*2)/2)} kg</b><span>Fuerza desde el inicio</span></div>`;
-  const note=bw?'Repeticiones totales de cada sesión (todas las series sumadas)':'Fuerza estimada (1RM): el peso que podrías levantar 1 vez, calculado con peso y repeticiones';
+    : `<div><b>${lastre?(last.w?'+'+fmtKg(last.w)+' kg':'Sin lastre'):fmtKg(last.w)+' kg'} × ${last.r}</b><span>Mejor serie reciente</span></div><div><b style="color:${up}">${sg}${fmtKg(Math.round(diff*2)/2)} kg</b><span>Fuerza desde el inicio</span></div>`;
+  const note=bw?'Repeticiones totales de cada sesión (todas las series sumadas)':lastre?`Fuerza estimada con tu peso corporal (${fmtKg(BWk)} kg) más el lastre, así se comparan las series con y sin peso extra`:'Fuerza estimada (1RM): el peso que podrías levantar 1 vez, calculado con peso y repeticiones';
   return `<div class="kv">${kv}</div>
   <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${note}">${grid}
     <path d="${area}" fill="var(--accent)" fill-opacity=".14"/>
     <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
     ${pts.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.v)}" r="${i===pts.length-1?5:2.6}" fill="var(--accent)" ${i===pts.length-1?'stroke="var(--surface)" stroke-width="2"':''}/>`).join('')}
     <text x="${pl}" y="${H-6}">${fmtDate(first.d)}</text><text x="${W-pr}" y="${H-6}" text-anchor="end">${fmtDate(last.d)}</text></svg>
-  <div class="muted" style="font-size:.78rem;margin-top:6px">${note}</div>`;
+  <div class="muted" style="font-size:.78rem;margin-top:6px">${note}</div>${isBW?`<div class="field" style="margin-top:10px"><label for="bodykg">Tu peso corporal (kg)</label><input id="bodykg" data-act="bodykg" type="number" inputmode="decimal" step="0.1" min="30" max="250" value="${BWk}"></div>`:''}`;
 }
 
 function viewRut(){
@@ -709,6 +712,7 @@ document.addEventListener('change',async ev=>{
   const t=ev.target;
   if(t.id==='bk-file'&&t.files&&t.files[0]){const r=new FileReader(); r.onload=()=>{const el=document.getElementById('bk-text'); if(el) el.value=r.result}; r.readAsText(t.files[0]); return}
   if(t.dataset.act==='prog'){S.progEx=t.value; render()}
+  else if(t.dataset.act==='bodykg'){const v=parseFloat(String(t.value).replace(',','.')); if(v>=30&&v<=250){S.plan.bodyKg=Math.round(v*10)/10; try{await S.store.savePlan(S.plan); toast('Peso corporal guardado')}catch(e){} render()}}
   else if(t.dataset.ef==='type'){render()}
   else if(t.dataset.act==='sched'){if(t.value) S.plan.schedule[t.dataset.d]=t.value; else delete S.plan.schedule[t.dataset.d]; try{await S.store.savePlan(S.plan); toast('Semana actualizada')}catch(e){toast('No se pudo guardar. Probá de nuevo.')}}
 });
