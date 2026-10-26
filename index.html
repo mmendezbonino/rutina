@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0c0e12">
+<meta name="theme-color" content="#0B2A6B">
 <meta name="description" content="Cuaderno de entrenamiento: rutinas, series, descanso, progreso y técnica en 3D.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/icon-192.png">
@@ -13,38 +13,28 @@
 <title>Cuaderno de Rutina</title>
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
-.upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--accent);color:var(--on-accent);cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.10.26-5";</script>
+.upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
+<script>window.__PWA=true;window.__APP_VERSION="2026.10.26-6";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700;9..40,800&display=swap">
 <style>
 /* Layout: app móvil nativa — título grande, listas agrupadas, tabla de series tipo planilla, barra inferior con íconos. Oscuro primero. */
 :root{
-  --bg:#0c0e12; --surface:#15181e; --surface-2:#1d2129; --surface-3:#262b35; --line:#272c36;
-  --fg:#f1f3f6; --fg-2:#a3abb8; --fg-3:#6c7584;
-  --accent:#4d7cff; --accent-soft:rgba(77,124,255,.16); --on-accent:#ffffff;
-  --ok:#34c47c; --ok-soft:rgba(52,196,124,.16); --danger:#ff6259;
-  --c-espalda:#4d7cff; --c-pecho:#ff6259; --c-piernas:#34c47c;
-  --floor:#1a1e25; --mach:#4a5260; --metal:#8a93a1; --pad:#2a3039; --muscle:#ff4a3d; --stage-a:#1f242d; --stage-b:#111419;
-  --font:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --r:16px; color-scheme:dark;
+  --azul:#0B2A6B; --azul-2:#1C3F8F; --rojo:#D21F2B; --rojo-soft:rgba(210,31,43,.10);
+  --bg:#F4F6FA; --surface:#ffffff; --surface-2:#EEF1F7; --surface-3:#E3E8F2; --line:#DCE2EE;
+  --fg:#0E1A33; --fg-2:#55617A; --fg-3:#65708A;
+  --accent:#0B2A6B; --accent-soft:#E7ECF7; --on-accent:#ffffff;
+  --ok:#0B2A6B; --ok-soft:#E7ECF7; --danger:#D21F2B;
+  --c-espalda:#0B2A6B; --c-pecho:#D21F2B; --c-piernas:#3D6FD1;
+  --floor:#e6e9ee; --mach:#5b6472; --metal:#9aa3b0; --pad:#3a414c; --muscle:#e5392f; --stage-a:#ffffff; --stage-b:#e4e8ee;
+  --shadow:0 1px 2px rgba(14,26,51,.06),0 8px 24px rgba(14,26,51,.06);
+  --font:"DM Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:24px; color-scheme:light;
 }
-@media (prefers-color-scheme: light){:root:not([data-theme="dark"]){
-  --bg:#f2f3f6; --surface:#ffffff; --surface-2:#f0f2f5; --surface-3:#e5e8ee; --line:#e3e6ec;
-  --fg:#11141a; --fg-2:#5a6372; --fg-3:#8d95a3;
-  --accent:#2457e6; --accent-soft:rgba(36,87,230,.10); --on-accent:#ffffff;
-  --ok:#14965a; --ok-soft:rgba(20,150,90,.12); --danger:#d93a31;
-  --c-espalda:#2457e6; --c-pecho:#d93a31; --c-piernas:#14965a; --floor:#e6e9ee; --mach:#5b6472; --metal:#9aa3b0; --pad:#3a414c; --muscle:#e5392f; --stage-a:#ffffff; --stage-b:#e4e8ee; color-scheme:light}}
-:root[data-theme="light"]{
-  --bg:#f2f3f6; --surface:#ffffff; --surface-2:#f0f2f5; --surface-3:#e5e8ee; --line:#e3e6ec;
-  --fg:#11141a; --fg-2:#5a6372; --fg-3:#8d95a3;
-  --accent:#2457e6; --accent-soft:rgba(36,87,230,.10); --on-accent:#ffffff;
-  --ok:#14965a; --ok-soft:rgba(20,150,90,.12); --danger:#d93a31;
-  --c-espalda:#2457e6; --c-pecho:#d93a31; --c-piernas:#14965a; --floor:#e6e9ee; --mach:#5b6472; --metal:#9aa3b0; --pad:#3a414c; --muscle:#e5392f; --stage-a:#ffffff; --stage-b:#e4e8ee; color-scheme:light}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{background:var(--bg)}
 body{color:var(--fg);font:15px/1.4 var(--font);margin:0;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
@@ -195,6 +185,74 @@ nav.tabs button[aria-current="page"]{color:var(--accent)}
 .sheet-info ol{margin:0;padding-left:1.1em;color:var(--fg-2);font-size:.88rem;display:flex;flex-direction:column;gap:4px}
 button.vlink{background:none;padding:0;cursor:pointer}
 a.btn{text-decoration:none}
+
+/* ===== Estilo Nacional: encabezado azul con franja tricolor, tarjetas blancas, rojo para lo que se toca ===== */
+html{background:var(--azul)}
+body{background:var(--bg);min-height:100vh}
+.app{padding-top:0}
+.ex .fnum{background:var(--azul)}
+.app>header{margin:0 -16px 0;padding:calc(20px + env(safe-area-inset-top,0px)) 20px 20px;background:var(--azul);color:#fff;position:relative;margin-bottom:6px}
+.app>header::after{content:"";position:absolute;left:0;right:0;bottom:-5px;height:5px;background:linear-gradient(90deg,#fff 0 33.33%,var(--azul) 33.33% 66.66%,var(--rojo) 66.66%)}
+.app>header .over{color:#C9D3EA;font-size:.88rem;font-weight:500}
+.app>header .sub{color:#C9D3EA}
+.app>header .sub b{color:#fff;font-weight:700}
+.app>header h1{color:#fff}
+.hpbar{display:flex;gap:6px;margin-top:14px}
+.hpbar i{flex:1;height:6px;border-radius:3px;background:rgba(255,255,255,.25)}
+.hpbar i.on{background:#fff}
+.wbar+header{margin-top:-20px}
+.wbar{background:var(--azul);color:#fff;border-bottom:0;padding-top:calc(10px + env(safe-area-inset-top,0px))}
+.wbar .prog{color:#C9D3EA}
+.wbar .pbar{background:rgba(255,255,255,.25)}
+.wbar .pbar i{background:#fff}
+.wbar .btn.ok{background:var(--rojo)}
+.group,.ex,.card,.strip,.ed,.empty{box-shadow:var(--shadow)}
+.group{border-radius:var(--r)}
+.ex{padding:16px;border-radius:var(--r)}
+.btn{border-radius:12px}
+.btn.primary{background:var(--rojo)}
+.btn.block{border-radius:16px}
+.btn.ok{background:var(--rojo);color:#fff}
+.btn.text{color:var(--azul)}
+.seg button{background:var(--surface);border-color:var(--line);color:var(--fg-2)}
+.seg button[aria-pressed="true"]{background:var(--azul);border-color:var(--azul);color:#fff}
+.badge.up{background:var(--rojo);color:#fff}
+.vid{background:var(--accent-soft);color:var(--azul)}
+.vlink{color:var(--azul)}
+.fnum{background:var(--azul);border-color:var(--surface);color:#fff}
+.ftile{border-radius:18px}
+.ftile.lg{border-radius:18px}
+/* tabla de series: cada fila es su propia caja */
+.tbl{display:flex;flex-direction:column;gap:8px}
+.tbl>.tr{display:grid;grid-template-columns:38px minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr) 44px;gap:8px;align-items:center;padding:6px;border-radius:14px;border:1.5px solid transparent}
+.tbl>.tr.hd{padding-block:0}
+.tbl .tr.done{background:var(--accent-soft)}
+.tbl .tr.done input{background:#fff}
+.tbl .tr.done .n{color:var(--azul)}
+.tbl .tr.cur{border-color:var(--rojo)}
+.tbl .tr.cur .chk{background:var(--rojo);color:#fff}
+.chk[aria-pressed="true"]{background:var(--azul);color:#fff}
+.ex .chk{flex:none}
+/* descanso */
+.timer-in{background:var(--surface);border-radius:var(--r);padding:12px 14px;gap:14px;box-shadow:0 2px 6px rgba(14,26,51,.08),0 16px 40px rgba(14,26,51,.18)}
+.ring{width:72px;height:72px;flex:none}
+.ring text{font:700 17px var(--font);fill:var(--fg)}
+.timer-l{display:flex;flex-direction:column;gap:6px}
+.timer-l b{font-size:.98rem}
+.timer-l .nx{font-size:.82rem;color:var(--fg-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.timer-l .nx b{font-size:inherit;color:var(--fg)}
+.timer-btns{display:flex;gap:6px}
+.timer-btns .btn{background:var(--accent-soft);color:var(--azul)}
+.timer-btns .btn.primary{background:var(--rojo);color:#fff}
+/* barra inferior */
+nav.tabs{background:#fff;border-top:1px solid var(--line);backdrop-filter:none;-webkit-backdrop-filter:none}
+nav.tabs button{color:var(--fg-2);border-top:3px solid transparent;font-size:.75rem}
+nav.tabs button[aria-current="page"]{color:var(--azul);font-weight:700;border-top-color:var(--rojo)}
+/* progreso */
+.strip b{color:var(--azul)}
+.kv b.up{display:inline-block;background:var(--rojo);color:#fff;padding:3px 10px;border-radius:999px;font-size:1rem}
+.toast{background:var(--azul);color:#fff}
+.sheet-in{background:var(--bg)}
 </style>
 
 <div class="app" id="app"><div class="empty">Cargando…</div></div>
@@ -392,7 +450,8 @@ function tick(){
     if(NATIVE){ try{NATIVE.keepScreenOn(false); if(!hidden) NATIVE.cancelRest()}catch(e){} if(!hidden){beep(); toast('Descanso terminado')} return }
     if(!hidden){beep(); toast('Descanso terminado')} else if(!sw) notifyDone(); return}
   el.hidden=false; el.className='timer';
-  el.innerHTML=`<div class="timer-in" role="timer" aria-live="off"><div class="timer-l"><span>Descanso</span><div class="timer-time">${mmss(left)}</div><div class="timer-bar"><i style="width:${(left/S.timer.total*100).toFixed(1)}%"></i></div></div><button class="btn sm" data-act="t-">−15</button><button class="btn sm" data-act="t+">+15</button><button class="btn sm primary" data-act="tskip">Saltar</button></div>`;
+  const C=2*Math.PI*30, fr=Math.max(0,Math.min(1,left/S.timer.total)), nx=S.workout?curLabel(S.workout):'';
+  el.innerHTML=`<div class="timer-in" role="timer" aria-live="off"><svg class="ring" viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="30" fill="none" stroke="var(--accent-soft)" stroke-width="7"/><circle cx="36" cy="36" r="30" fill="none" stroke="var(--azul)" stroke-width="7" stroke-linecap="round" stroke-dasharray="${(C*fr).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 36 36)"/><text x="36" y="42" text-anchor="middle">${mmss(left)}</text></svg><div class="timer-l"><b>Descansando</b>${nx?`<span class="nx">Sigue: <b>${esc(nx)}</b></span>`:''}<div class="timer-btns"><button class="btn sm" data-act="t-">−15 s</button><button class="btn sm" data-act="t+">+15 s</button><button class="btn sm primary" data-act="tskip">Saltar</button></div></div></div>`;
   if(!tick._i) tick._i=setInterval(tick,250);
 }
 document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ if(S.timer){wakeLock(true); tick()} } });
@@ -455,7 +514,8 @@ function viewHoy(){
   const now=new Date(), dow=now.getDay();
   const key=S.pick || S.plan.schedule[dow] || null;
   const keys=Object.keys(S.plan.routines);
-  let h=`<header><div class="over">${DAYNAMES[dow]} ${now.getDate()} de ${now.toLocaleDateString('es-UY',{month:'long'})}</div><h1>${key?esc(S.plan.routines[key].name):'Día de descanso'}</h1>`;
+  const hr=now.getHours(), hola=hr<13?'Buen día':hr<20?'Buenas tardes':'Buenas noches';
+  let h=`<header><div class="over">${hola} · ${DAYNAMES[dow].toLowerCase()} ${now.getDate()} de ${now.toLocaleDateString('es-UY',{month:'long'})}</div><h1>${key?esc(S.plan.routines[key].name):'Día de descanso'}</h1>`;
   if(key){const r=S.plan.routines[key]; const ns=r.exercises.reduce((a,e)=>a+(e.type==='cardio'?0:e.sets),0); h+=`<div class="sub">${r.exercises.length} ejercicios · ${ns} series</div>`}
   h+=`</header>`;
   h+=`<div class="seg" role="group" aria-label="Elegir rutina">${keys.map(k=>`<button data-act="pick" data-k="${k}" aria-pressed="${k===key}"><span class="dot" style="background:${colorOf(k)}"></span>${esc(S.plan.routines[k].name)}</button>`).join('')}</div>`;
@@ -475,12 +535,22 @@ function viewHoy(){
 }
 function cloudNote(){ return !window.__PWA&&S.store&&S.store.cloud===false&&S.store.ready ? `<div class="note">Los datos se guardan en este navegador. Abrí la app desde su link de Claude para sincronizarlos con tu cuenta.</div>` : '' }
 
+// primera serie sin marcar (la que toca ahora) y lo que viene después
+function curPos(w){ for(let ei=0;ei<w.entries.length;ei++){const e=w.entries[ei]; if(e.type==='fuerza'){const si=e.sets.findIndex(s=>!s.done); if(si>=0) return {ei,si}} else if(!e.done) return {ei,si:-1}} return null }
+function curLabel(w){ const c=curPos(w); if(!c) return 'Terminar entrenamiento'; const e=w.entries[c.ei]; return e.type==='fuerza'?(c.si>0?`Serie ${c.si+1} de ${e.sets.length}${e.sets[c.si].w?` · ${fmtKg(+e.sets[c.si].w)} kg`:''}`:`${e.name} · ${e.sets.length} series`):e.name }
+function nextUp(w){ const c=curPos(w); if(!c) return '';
+  const r=S.plan.routines[w.key]||{exercises:[]}, e=w.entries[c.ei];
+  if(e.type==='fuerza'){ const left=e.sets.slice(c.si).filter(s=>!s.done).length; if(left>1) return `${e.name} · serie ${c.si+2} de ${e.sets.length}` }
+  for(let i=c.ei+1;i<w.entries.length;i++){const n=w.entries[i]; const nd=n.type==='fuerza'?n.sets.some(s=>!s.done):!n.done; if(nd){const ex=r.exercises.find(x=>x.id===n.exId)||{}; return n.type==='fuerza'?`${n.name} · ${n.sets.length} × ${ex.reps||''}`:`${n.name} · ${ex.reps||''} min`}}
+  return 'Terminar entrenamiento' }
 function viewWorkout(){
   const w=S.workout; const r=S.plan.routines[w.key]||{exercises:[]}; const c=colorOf(w.key);
   const doneSets=w.entries.reduce((a,e)=>a+(e.type==='fuerza'?e.sets.filter(s=>s.done).length:(e.done?1:0)),0);
   const totalSets=w.entries.reduce((a,e)=>a+(e.type==='fuerza'?e.sets.length:1),0);
   let h=`<div class="wbar"><div style="flex:1;min-width:0"><div class="spread" style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span class="clock" id="clock">${hms(Date.now()-w.started)}</span><span class="prog">${doneSets} de ${totalSets} series</span></div><div class="pbar"><i style="width:${totalSets?doneSets/totalSets*100:0}%"></i></div></div><button class="btn sm ok" data-act="finish">Terminar</button></div>`;
-  h+=`<header><div class="over">En curso</div><h1>${esc(w.name)}</h1></header>`;
+  const cur=curPos(w), nx=nextUp(w);
+  const exDone=e=>e.type==='fuerza'?e.sets.every(s=>s.done):!!e.done;
+  h+=`<header><div class="over">En curso</div><h1>${esc(w.name)}</h1>${nx?`<div class="sub">Después: <b>${esc(nx)}</b></div>`:''}<div class="hpbar" aria-hidden="true">${w.entries.map(e=>`<i class="${exDone(e)?'on':''}"></i>`).join('')}</div></header>`;
   if(S.confirmFinish){
     h+=`<div class="confirm"><span style="flex:1;min-width:180px">¿Guardar el entrenamiento? Se guardan las series marcadas.</span><button class="btn sm primary" data-act="finish2">Guardar</button><button class="btn sm" data-act="finishno">Seguir</button><button class="btn sm danger" data-act="discard">Descartar</button></div>`;
   }
@@ -496,8 +566,8 @@ function viewWorkout(){
       </div></section>`;
     }
     return `<section class="ex"><div class="ex-h"><div class="ftile lg" style="${tileStyle(c)}">${fig(e,c)}<span class="fnum">${ei+1}</span></div><div class="row-main"><div class="row-title">${esc(e.name)}</div><div class="row-sub">${esc(ex.reps)} reps · ${mmss(ex.rest)} de descanso</div><button class="vlink" data-act="tech" data-ex="${esc(e.exId)}">${IC_PLAY} Ver técnica 3D</button></div>${suggestUp(ex,last)?'<span class="badge up">Subí peso</span>':''}</div>
-    <div class="tbl"><span class="th">Serie</span><span class="th">Anterior</span><span class="th">kg</span><span class="th">Reps</span><span class="th"></span>
-    ${e.sets.map((s,si)=>`<div class="${s.done?'done':''}"><span class="n">${si+1}</span><span class="prev">${esc(s.prev||'—')}</span>
+    <div class="tbl"><div class="tr hd"><span class="th">Serie</span><span class="th">Anterior</span><span class="th">kg</span><span class="th">Reps</span><span class="th"></span></div>
+    ${e.sets.map((s,si)=>`<div class="tr${s.done?' done':''}${cur&&cur.ei===ei&&cur.si===si?' cur':''}"><span class="n">${si+1}</span><span class="prev">${esc(s.prev||'—')}</span>
       <input id="w-${ei}-${si}" inputmode="decimal" aria-label="Peso serie ${si+1}" data-sf="w" data-ei="${ei}" data-si="${si}" value="${esc(s.w)}">
       <input id="r-${ei}-${si}" inputmode="numeric" aria-label="Repeticiones serie ${si+1}" placeholder="${esc(s.ph)}" data-sf="r" data-ei="${ei}" data-si="${si}" value="${esc(s.r)}">
       <button class="chk" aria-label="Serie ${si+1} hecha" aria-pressed="${s.done}" data-act="set" data-ei="${ei}" data-si="${si}">${IC.check}</button></div>`).join('')}
@@ -556,14 +626,14 @@ function chart(exId,ids){ ids=ids||[exId];
   const grid=[hi,(hi+lo)/2,lo].map(v=>`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${pl-6}" y="${y(v)+4}" text-anchor="end">${fv(v)}</text>`).join('');
   const up=diff>0?'var(--ok)':'var(--fg)', sg=diff>0?'+':'';
   const kv=bw
-    ? `<div><b>${last.r} reps</b><span>Mejor serie reciente</span></div><div><b style="color:${up}">${sg}${Math.round(diff)} reps</b><span>Totales desde el inicio</span></div>`
-    : `<div><b>${lastre?(last.w?'+'+fmtKg(last.w)+' kg':'Sin lastre'):fmtKg(last.w)+' kg'} × ${last.r}</b><span>Mejor serie reciente</span></div><div><b style="color:${up}">${sg}${fmtKg(Math.round(diff*2)/2)} kg</b><span>Fuerza desde el inicio</span></div>`;
+    ? `<div><b>${last.r} reps</b><span>Mejor serie reciente</span></div><div><b class="${diff>0?'up':''}">${sg}${Math.round(diff)} reps</b><span>Totales desde el inicio</span></div>`
+    : `<div><b>${lastre?(last.w?'+'+fmtKg(last.w)+' kg':'Sin lastre'):fmtKg(last.w)+' kg'} × ${last.r}</b><span>Mejor serie reciente</span></div><div><b class="${diff>0?'up':''}">${sg}${fmtKg(Math.round(diff*2)/2)} kg</b><span>Fuerza desde el inicio</span></div>`;
   const note=bw?'Repeticiones totales de cada sesión (todas las series sumadas)':lastre?`Fuerza estimada con tu peso corporal (${fmtKg(BWk)} kg) más el lastre, así se comparan las series con y sin peso extra`:'Fuerza estimada (1RM): el peso que podrías levantar 1 vez, calculado con peso y repeticiones';
   return `<div class="kv">${kv}</div>
   <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${note}">${grid}
-    <path d="${area}" fill="var(--accent)" fill-opacity=".14"/>
-    <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
-    ${pts.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.v)}" r="${i===pts.length-1?5:2.6}" fill="var(--accent)" ${i===pts.length-1?'stroke="var(--surface)" stroke-width="2"':''}/>`).join('')}
+    <path d="${area}" fill="var(--accent)" fill-opacity=".09"/>
+    <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+    ${pts.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.v)}" r="${i===pts.length-1?5.5:2.8}" fill="${i===pts.length-1?'var(--surface)':'var(--accent)'}" ${i===pts.length-1?'stroke="var(--rojo)" stroke-width="3"':''}/>`).join('')}
     <text x="${pl}" y="${H-6}">${fmtDate(first.d)}</text><text x="${W-pr}" y="${H-6}" text-anchor="end">${fmtDate(last.d)}</text></svg>
   <div class="muted" style="font-size:.78rem;margin-top:6px">${note}</div>${isBW?`<div class="field" style="margin-top:10px"><label for="bodykg">Tu peso corporal (kg)</label><input id="bodykg" data-act="bodykg" type="number" inputmode="decimal" step="0.1" min="30" max="250" value="${BWk}"></div>`:''}`;
 }
