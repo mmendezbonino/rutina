@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.10.26-6";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.10.26-7";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -244,6 +244,17 @@ body{background:var(--bg);min-height:100vh}
 .timer-btns{display:flex;gap:6px}
 .timer-btns .btn{background:var(--accent-soft);color:var(--azul)}
 .timer-btns .btn.primary{background:var(--rojo);color:#fff}
+/* semana */
+.week{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);padding:6px;gap:4px}
+.week button{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;padding:9px 2px 10px;border-radius:18px;color:var(--fg-2)}
+.week .wd{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.week .dn{font-size:1.35rem;font-weight:800;color:var(--fg);line-height:1.2}
+.week .rn{font-size:.7rem;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.week .today .wd{color:var(--rojo)}
+.week button[aria-pressed="true"]{background:var(--azul);color:#C9D3EA}
+.week button[aria-pressed="true"] .dn{color:#fff}
+.week button[aria-pressed="true"].today .wd{color:#fff}
+.week .ok{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--rojo)}
 /* barra inferior */
 nav.tabs{background:#fff;border-top:1px solid var(--line);backdrop-filter:none;-webkit-backdrop-filter:none}
 nav.tabs button{color:var(--fg-2);border-top:3px solid transparent;font-size:.75rem}
@@ -512,13 +523,20 @@ const IC_PLAY='<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColo
 function viewHoy(){
   if(S.workout) return viewWorkout();
   const now=new Date(), dow=now.getDay();
-  const key=S.pick || S.plan.schedule[dow] || null;
+  const key=S.pickDow!=null?(S.plan.schedule[S.pickDow]||null):(S.pick || S.plan.schedule[dow] || null);
   const keys=Object.keys(S.plan.routines);
   const hr=now.getHours(), hola=hr<13?'Buen día':hr<20?'Buenas tardes':'Buenas noches';
   let h=`<header><div class="over">${hola} · ${DAYNAMES[dow].toLowerCase()} ${now.getDate()} de ${now.toLocaleDateString('es-UY',{month:'long'})}</div><h1>${key?esc(S.plan.routines[key].name):'Día de descanso'}</h1>`;
   if(key){const r=S.plan.routines[key]; const ns=r.exercises.reduce((a,e)=>a+(e.type==='cardio'?0:e.sets),0); h+=`<div class="sub">${r.exercises.length} ejercicios · ${ns} series</div>`}
   h+=`</header>`;
-  h+=`<div class="seg" role="group" aria-label="Elegir rutina">${keys.map(k=>`<button data-act="pick" data-k="${k}" aria-pressed="${k===key}"><span class="dot" style="background:${colorOf(k)}"></span>${esc(S.plan.routines[k].name)}</button>`).join('')}</div>`;
+  // semana: un casillero por día con rutina (más hoy), tocás el día y te carga esa rutina
+  const mon=new Date(now); mon.setHours(0,0,0,0); mon.setDate(now.getDate()-((dow+6)%7));
+  const selDow=S.pickDow!=null?S.pickDow:dow;
+  const trained=new Set(S.sessions.map(x=>new Date(x.date).toDateString()));
+  const cells=[1,2,3,4,5,6,0].filter(d=>S.plan.schedule[d]||d===dow).map(d=>{const dt=new Date(mon); dt.setDate(mon.getDate()+((d+6)%7)); const k=S.plan.schedule[d]||'';
+    const short=k?esc(S.plan.routines[k].name.split(/[·,]/)[0].trim()):'Descanso';
+    return `<button data-act="pick" data-k="${k}" data-d="${d}" aria-pressed="${d===selDow}" class="${d===dow?'today':''}"><span class="wd">${DAYNAMES[d].slice(0,3)}</span><span class="dn">${dt.getDate()}</span><span class="rn">${short}</span>${trained.has(dt.toDateString())?'<i class="ok" aria-label="Entrenado"></i>':''}</button>`}).join('');
+  h+=`<div class="week" role="group" aria-label="Elegir día">${cells}</div>`;
   if(!key) return h+`<div class="empty">Hoy no tenés rutina programada.<br>Elegí una arriba si querés entrenar igual.</div>`+cloudNote();
   const r=S.plan.routines[key], c=colorOf(key);
   h+=`<div class="group">`+r.exercises.map((ex,i)=>{
@@ -741,7 +759,7 @@ document.addEventListener('click',async ev=>{
     case 'bk-import': S.bkImport=true; S.bkText=null; render(); break;
     case 'bk-cancel': S.bkImport=false; render(); break;
     case 'bk-do': {const el=document.getElementById('bk-text'); await backupImport(el?el.value:''); break}
-    case 'pick': S.pick=t.dataset.k; render(); break;
+    case 'pick': S.pick=t.dataset.k||null; S.pickDow=t.dataset.d!=null?+t.dataset.d:null; render(); break;
     case 'start': startWorkout(t.dataset.k); window.scrollTo(0,0); break;
     case 'set': {const s=W.entries[ei].sets[si]; s.done=!s.done; if(s.done&&s.r==='') s.r=s.ph||''; saveDraft(); render();
       if(s.done){const ex=(S.plan.routines[W.key].exercises.find(x=>x.id===W.entries[ei].exId)||{rest:90}); startTimer(ex.rest)} break}
