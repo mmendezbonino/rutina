@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.10.26-9";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.10.26-10";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -256,6 +256,8 @@ body{background:var(--bg);min-height:100vh}
 .week button[aria-pressed="true"].today .wd{color:#fff}
 .rsel .dn{font-size:1.05rem;padding-block:2px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .week .ok{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--rojo)}
+.pick{gap:10px;background:var(--bg);box-shadow:none;padding:4px 0}
+.pick>.row{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow)}
 /* barra inferior */
 nav.tabs{background:#fff;border-top:1px solid var(--line);backdrop-filter:none;-webkit-backdrop-filter:none}
 nav.tabs button{color:var(--fg-2);border-top:3px solid transparent;font-size:.75rem}
@@ -657,6 +659,11 @@ function chart(exId,ids){ ids=ids||[exId];
   <div class="muted" style="font-size:.78rem;margin-top:6px">${note}</div>${isBW?`<div class="field" style="margin-top:10px"><label for="bodykg">Tu peso corporal (kg)</label><input id="bodykg" data-act="bodykg" type="number" inputmode="decimal" step="0.1" min="30" max="250" value="${BWk}"></div>`:''}`;
 }
 
+// ejercicios que ya existen en tus rutinas (sin repetir) para agregarlos con un toque
+function pickList(){ const seen=new Set(), out=[]; const nk=n=>String(n||'').trim().toLowerCase();
+  const inDraft=new Set((S.editDraft?S.editDraft.exercises:[]).map(e=>nk(e.name)));
+  Object.entries(S.plan.routines).forEach(([k,r])=>r.exercises.forEach(e=>{const n=nk(e.name); if(seen.has(n)||inDraft.has(n)) return; seen.add(n); out.push({...e,from:k})}));
+  return out }
 function viewRut(){
   const keys=Object.keys(S.plan.routines);
   if(!S.editDraft) S.editDraft=JSON.parse(JSON.stringify(S.plan.routines[S.editKey]));
@@ -677,7 +684,11 @@ function viewRut(){
       <div class="field"><label for="et-${i}">Desc. (s)</label><input id="et-${i}" inputmode="numeric" data-ef="rest" data-i="${i}" value="${e.rest}"></div>
     </div>
     <div class="field"><label for="ey-${i}">Tipo</label><select id="ey-${i}" data-ef="type" data-i="${i}"><option value="fuerza" ${e.type==='fuerza'?'selected':''}>Fuerza · series y repeticiones</option><option value="cardio" ${e.type==='cardio'?'selected':''}>Cardio · minutos y distancia</option></select></div>
-  </div>`).join('')+`<button class="btn" data-act="addex">${IC.plus} Agregar ejercicio</button></section>`;
+  </div>`).join('')+(S.addOpen?`<div class="card pick"><div class="section-h" style="padding:0"><h2>Agregar ejercicio</h2><button class="btn sm text" data-act="addex">Cerrar</button></div>
+    <button class="row" data-act="addnew"><div class="tile" style="background:var(--rojo);color:#fff">${IC.plus}</div><div class="row-main"><div class="row-title">Ejercicio nuevo</div><div class="row-sub">Escribís el nombre vos</div></div></button>
+    ${(()=>{const L=pickList(); if(!L.length) return ''; const by={}; L.forEach(e=>(by[e.from]=by[e.from]||[]).push(e));
+      return Object.entries(by).map(([k,es])=>`<div class="over" style="padding:6px 4px 0">De ${esc(S.plan.routines[k].name)}</div><div class="group">${es.map(e=>`<button class="row" data-act="addpick" data-id="${esc(e.id)}"><div class="ftile" style="${tileStyle(colorOf(k))}">${fig(e,colorOf(k))}</div><div class="row-main"><div class="row-title">${esc(e.name)}</div><div class="row-sub">${e.type==='cardio'?`Cardio · ${esc(e.reps)} min`:`${e.sets} × ${esc(e.reps)}${e.weight?` · ${fmtKg(e.weight)} kg`:''}`}</div></div><span class="chev">${IC.plus}</span></button>`).join('')}</div>`).join('')})()}
+  </div>`:`<button class="btn" data-act="addex">${IC.plus} Agregar ejercicio</button>`)+`</section>`;
   h+=`<div style="display:flex;gap:8px"><button class="btn primary" style="flex:1" data-act="esave">Guardar cambios</button><button class="btn" data-act="ereset">Descartar</button></div>`;
   h+=`<section class="section"><div class="section-h"><h2>Semana</h2></div><div class="group sched">${[1,2,3,4,5,6,0].map(dw=>`<div class="row"><label class="row-main row-title" for="sch-${dw}">${DAYNAMES[dw]}</label><select id="sch-${dw}" data-act="sched" data-d="${dw}"><option value="">Descanso</option>${keys.map(k=>`<option value="${k}" ${S.plan.schedule[dw]===k?'selected':''}>${esc(S.plan.routines[k].name)}</option>`).join('')}</select></div>`).join('')}</div></section>`;
   h+=backupSection();
@@ -779,10 +790,15 @@ document.addEventListener('click',async ev=>{
     case 'del': S.confirmDel=t.dataset.id; render(); break;
     case 'delno': S.confirmDel=null; render(); break;
     case 'del2': try{await S.store.delSession(t.dataset.id); S.sessions=S.sessions.filter(s=>s.id!==t.dataset.id); toast('Sesión borrada')}catch(e){toast('No se pudo borrar. Probá de nuevo.')} S.confirmDel=null; render(); break;
-    case 'ekey': S.editKey=t.dataset.k; S.editDraft=null; render(); break;
+    case 'ekey': S.editKey=t.dataset.k; S.editDraft=null; S.addOpen=false; render(); break;
     case 'up': case 'down': {const ex=S.editDraft.exercises, j=a==='up'?i-1:i+1; [ex[i],ex[j]]=[ex[j],ex[i]]; render(); break}
     case 'rmex': S.editDraft.exercises.splice(i,1); render(); break;
-    case 'addex': S.editDraft.exercises.push({id:uid('e'),name:'Nuevo ejercicio',type:'fuerza',sets:3,reps:'10-12',weight:0,rest:90}); render(); break;
+    case 'addex': S.addOpen=!S.addOpen; render(); break;
+    case 'addnew': S.addOpen=false; S.editDraft.exercises.push({id:uid('e'),name:'Nuevo ejercicio',type:'fuerza',sets:3,reps:'10-12',weight:0,rest:90}); render(); setTimeout(()=>{const el=document.getElementById('en-'+(S.editDraft.exercises.length-1)); if(el){el.focus(); el.select()}},50); break;
+    case 'addpick': { const src=pickList().find(x=>x.id===t.dataset.id); if(!src) break; S.addOpen=false;
+      const taken=S.editDraft.exercises.some(e=>e.id===src.id);
+      S.editDraft.exercises.push({id:taken?uid('e'):src.id,name:src.name,type:src.type,sets:src.sets,reps:src.reps,weight:src.weight,rest:src.rest});
+      render(); toast(`Agregado: ${src.name}. Tocá Guardar cambios`); break; }
     case 'ereset': S.editDraft=null; render(); toast('Cambios descartados'); break;
     case 'esave': S.plan.routines[S.editKey]=JSON.parse(JSON.stringify(S.editDraft)); try{await S.store.savePlan(S.plan); toast('Rutina guardada')}catch(e){toast('No se pudo guardar. Probá de nuevo.')} render(); break;
   }
