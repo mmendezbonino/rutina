@@ -1,9 +1,10 @@
 // Service worker de Cuaderno de Rutina: guarda la app para abrir rápido y sin conexión.
-const VERSION='2026.10.26-8';
+const VERSION='2026.10.26-9';
 const CACHE='rutina-'+VERSION;
 const ASSETS=['./','index.html','anim3d.js','male.glb','lib/three.min.js','lib/GLTFLoader.js','manifest.webmanifest',
   'icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png','icons/apple-touch-icon.png'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)))});
+// cache:'reload' baja los archivos frescos del servidor, no la copia vieja que guarda el navegador
+self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS.map(u=>new Request(u,{cache:'reload'})))))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith('rutina-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
 // fin del descanso: el service worker espera y avisa aunque la app esté en segundo plano o la pantalla apagada
 let restT=null, restDone=null;
