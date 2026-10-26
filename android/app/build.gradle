@@ -1,0 +1,26 @@
+plugins { id 'com.android.application' }
+def vc = Integer.parseInt((project.findProperty('vc') ?: '1').toString())
+android {
+    namespace 'uy.marcos.rutina'
+    compileSdk 34
+    defaultConfig {
+        applicationId 'uy.marcos.rutina'
+        minSdk 24
+        targetSdk 34
+        versionCode vc
+        versionName "1.${vc}"
+    }
+    signingConfigs {
+        release {
+            storeFile file('../rutina.jks')
+            storePassword 'rutina-app'
+            keyAlias 'rutina'
+            keyPassword 'rutina-app'
+        }
+    }
+    buildTypes {
+        release { minifyEnabled false; signingConfig signingConfigs.release }
+    }
+    lint { checkReleaseBuilds false; abortOnError false }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+}

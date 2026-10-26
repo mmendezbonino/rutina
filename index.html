@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--accent);color:var(--on-accent);cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.10.17-1";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.10.26-1";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -378,15 +378,19 @@ async function notifyDone(){
     const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration(); if(reg) reg.showNotification('Descanso terminado',opt); else new Notification('Descanso terminado',opt);
   }catch(e){}
 }
-function swTimer(){try{const c=navigator.serviceWorker&&navigator.serviceWorker.controller; if(c) c.postMessage(S.timer?{type:'rest',end:S.timer.end}:{type:'rest-cancel'})}catch(e){}}
+const NATIVE=window.RutinaNative||null; // app Android: el aviso lo programa el sistema con una alarma
+function swTimer(){ if(NATIVE){try{ if(S.timer){NATIVE.scheduleRest(S.timer.end); NATIVE.keepScreenOn(true)} else {NATIVE.cancelRest(); NATIVE.keepScreenOn(false)} }catch(e){} return }
+  try{const c=navigator.serviceWorker&&navigator.serviceWorker.controller; if(c) c.postMessage(S.timer?{type:'rest',end:S.timer.end}:{type:'rest-cancel'})}catch(e){}}
 function startTimer(sec){ if(!sec) return;
-  S.timer={end:Date.now()+sec*1000,total:sec}; askNotif(); wakeLock(true); swTimer(); tick(); }
+  S.timer={end:Date.now()+sec*1000,total:sec}; if(!NATIVE) askNotif(); wakeLock(true); swTimer(); tick(); }
 function stopTimer(){S.timer=null; clearInterval(tick._i); tick._i=null; document.getElementById('timer').hidden=true; wakeLock(false); swTimer()}
 function tick(){
   const el=document.getElementById('timer');
   if(!S.timer){el.hidden=true;return}
   const left=(S.timer.end-Date.now())/1000;
-  if(left<=0){const hidden=document.visibilityState!=='visible', sw=!!(navigator.serviceWorker&&navigator.serviceWorker.controller); S.timer=null; clearInterval(tick._i); tick._i=null; el.hidden=true; wakeLock(false); if(!hidden){beep(); toast('Descanso terminado')} else if(!sw) notifyDone(); return}
+  if(left<=0){const hidden=document.visibilityState!=='visible', sw=!!(navigator.serviceWorker&&navigator.serviceWorker.controller); S.timer=null; clearInterval(tick._i); tick._i=null; el.hidden=true; wakeLock(false);
+    if(NATIVE){ try{NATIVE.keepScreenOn(false); if(!hidden) NATIVE.cancelRest()}catch(e){} if(!hidden){beep(); toast('Descanso terminado')} return }
+    if(!hidden){beep(); toast('Descanso terminado')} else if(!sw) notifyDone(); return}
   el.hidden=false; el.className='timer';
   el.innerHTML=`<div class="timer-in" role="timer" aria-live="off"><div class="timer-l"><span>Descanso</span><div class="timer-time">${mmss(left)}</div><div class="timer-bar"><i style="width:${(left/S.timer.total*100).toFixed(1)}%"></i></div></div><button class="btn sm" data-act="t-">−15</button><button class="btn sm" data-act="t+">+15</button><button class="btn sm primary" data-act="tskip">Saltar</button></div>`;
   if(!tick._i) tick._i=setInterval(tick,250);
