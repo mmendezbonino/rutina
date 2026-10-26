@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--accent);color:var(--on-accent);cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.10.26-2";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.10.26-3";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -533,22 +533,34 @@ function viewHist(){
 }
 
 function chart(exId){
-  const pts=S.sessions.slice().reverse().map(s=>{const e=s.entries.find(x=>x.exId===exId); if(!e||!e.sets||!e.sets.length) return null; const best=e.sets.reduce((a,x)=>x.w>a.w||(x.w===a.w&&x.r>a.r)?x:a,e.sets[0]); return {d:s.date,w:best.w,r:best.r}}).filter(Boolean).slice(-16);
-  if(!pts.length) return `<div class="muted" style="font-size:.9rem;padding:8px 0">Sin datos de este ejercicio todavía.</div>`;
+  // Con peso: fuerza estimada (1RM, fórmula de Epley), así subir repeticiones con el mismo peso también se ve.
+  // Peso corporal (todas las series en 0 kg): repeticiones de la mejor serie.
+  const e1=x=>x.w*(1+x.r/30);
+  const raw=S.sessions.slice().reverse().map(s=>{const e=s.entries.find(x=>x.exId===exId); if(!e||!e.sets||!e.sets.length) return null; const ok=e.sets.filter(x=>x.r>0); return ok.length?{d:s.date,sets:ok}:null}).filter(Boolean).slice(-16);
+  if(!raw.length) return `<div class="muted" style="font-size:.9rem;padding:8px 0">Sin datos de este ejercicio todavía.</div>`;
+  const bw=raw.every(p=>p.sets.every(x=>!x.w));
+  const pts=raw.map(p=>{ if(bw){const best=p.sets.reduce((a,x)=>x.r>a.r?x:a,p.sets[0]); const tot=p.sets.reduce((a,x)=>a+x.r,0); return {d:p.d,w:0,r:best.r,v:tot,tot}}
+    const best=p.sets.reduce((a,x)=>e1(x)>e1(a)?x:a,p.sets[0]); return {d:p.d,w:best.w,r:best.r,v:e1(best)} });
   const W=320,H=150,pl=34,pr=12,pt=14,pb=24;
-  const ws=pts.map(p=>p.w); let lo=Math.min(...ws), hi=Math.max(...ws); if(lo===hi){lo=Math.max(0,lo-5);hi=hi+5}
+  const vs=pts.map(p=>p.v); let lo=Math.min(...vs), hi=Math.max(...vs); if(lo===hi){lo=Math.max(0,lo-(bw?2:5)); hi=hi+(bw?2:5)} if(bw){lo=Math.floor(lo); hi=Math.ceil(hi); if((hi-lo)%2) hi++}
   const x=i=>pts.length===1?(pl+(W-pl-pr)/2):pl+i*(W-pl-pr)/(pts.length-1);
   const y=v=>pt+(hi-v)*(H-pt-pb)/(hi-lo);
-  const line=pts.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p.w).toFixed(1)}`).join(' ');
+  const line=pts.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ');
   const area=line+` L${x(pts.length-1).toFixed(1)},${H-pb} L${x(0).toFixed(1)},${H-pb} Z`;
-  const last=pts[pts.length-1], first=pts[0], diff=last.w-first.w;
-  const grid=[hi,(hi+lo)/2,lo].map(v=>`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${pl-6}" y="${y(v)+4}" text-anchor="end">${fmtKg(v)}</text>`).join('');
-  return `<div class="kv"><div><b>${fmtKg(last.w)} kg × ${last.r}</b><span>Mejor serie reciente</span></div><div><b style="color:${diff>0?'var(--ok)':'var(--fg)'}">${diff>0?'+':''}${fmtKg(diff)} kg</b><span>Desde el inicio</span></div></div>
-  <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Peso de la mejor serie por sesión">${grid}
+  const last=pts[pts.length-1], first=pts[0], diff=last.v-first.v, fv=v=>bw?String(Math.round(v)):fmtKg(Math.round(v*2)/2);
+  const grid=[hi,(hi+lo)/2,lo].map(v=>`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${pl-6}" y="${y(v)+4}" text-anchor="end">${fv(v)}</text>`).join('');
+  const up=diff>0?'var(--ok)':'var(--fg)', sg=diff>0?'+':'';
+  const kv=bw
+    ? `<div><b>${last.r} reps</b><span>Mejor serie reciente</span></div><div><b style="color:${up}">${sg}${Math.round(diff)} reps</b><span>Totales desde el inicio</span></div>`
+    : `<div><b>${fmtKg(last.w)} kg × ${last.r}</b><span>Mejor serie reciente</span></div><div><b style="color:${up}">${sg}${fmtKg(Math.round(diff*2)/2)} kg</b><span>Fuerza desde el inicio</span></div>`;
+  const note=bw?'Repeticiones totales de cada sesión (todas las series sumadas)':'Fuerza estimada (1RM): el peso que podrías levantar 1 vez, calculado con peso y repeticiones';
+  return `<div class="kv">${kv}</div>
+  <svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${note}">${grid}
     <path d="${area}" fill="var(--accent)" fill-opacity=".14"/>
     <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
-    ${pts.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.w)}" r="${i===pts.length-1?5:2.6}" fill="var(--accent)" ${i===pts.length-1?'stroke="var(--surface)" stroke-width="2"':''}/>`).join('')}
-    <text x="${pl}" y="${H-6}">${fmtDate(first.d)}</text><text x="${W-pr}" y="${H-6}" text-anchor="end">${fmtDate(last.d)}</text></svg>`;
+    ${pts.map((p,i)=>`<circle cx="${x(i)}" cy="${y(p.v)}" r="${i===pts.length-1?5:2.6}" fill="var(--accent)" ${i===pts.length-1?'stroke="var(--surface)" stroke-width="2"':''}/>`).join('')}
+    <text x="${pl}" y="${H-6}">${fmtDate(first.d)}</text><text x="${W-pr}" y="${H-6}" text-anchor="end">${fmtDate(last.d)}</text></svg>
+  <div class="muted" style="font-size:.78rem;margin-top:6px">${note}</div>`;
 }
 
 function viewRut(){
