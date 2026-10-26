@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--accent);color:var(--on-accent);cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.10.26-4";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.10.26-5";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -515,11 +515,13 @@ function viewHist(){
   const thisWeek=S.sessions.filter(s=>new Date(s.date)>=wk);
   const vol=thisWeek.reduce((a,s)=>a+volOf(s),0);
   h+=`<div class="strip"><div><b>${thisWeek.length}</b><span>Esta semana</span></div><div><b>${fmtVol(vol)}</b><span>Volumen 7 días</span></div><div><b>${S.sessions.length}</b><span>Sesiones</span></div></div>`;
-  const exs=[]; const seen=new Set();
-  Object.values(S.plan.routines).forEach(r=>r.exercises.forEach(e=>{if(e.type==='fuerza'&&!seen.has(e.id)){seen.add(e.id);exs.push(e)}}));
-  S.sessions.forEach(s=>s.entries.forEach(e=>{if(e.type==='fuerza'&&!seen.has(e.exId)){seen.add(e.exId);exs.push({id:e.exId,name:e.name})}}));
-  const sel=S.progEx||(exs[0]&&exs[0].id);
-  h+=`<section class="section"><div class="section-h"><h2>Por ejercicio</h2></div><div class="card"><div class="field"><label for="progsel">Ejercicio</label><select id="progsel" data-act="prog">${exs.map(e=>`<option value="${esc(e.id)}" ${e.id===sel?'selected':''}>${esc(e.name)}</option>`).join('')}</select></div>${chart(sel)}</div></section>`;
+  // un mismo ejercicio en dos rutinas (p. ej. elevaciones laterales) se muestra una sola vez y junta su historial
+  const exs=[]; const byKey={}; const nk=n=>String(n||'').trim().toLowerCase();
+  const addEx=(id,name)=>{const k=nk(name)||id; if(!byKey[k]){byKey[k]={id,name,ids:[id]}; exs.push(byKey[k])} else if(!byKey[k].ids.includes(id)) byKey[k].ids.push(id)};
+  Object.values(S.plan.routines).forEach(r=>r.exercises.forEach(e=>{if(e.type==='fuerza') addEx(e.id,e.name)}));
+  S.sessions.forEach(s=>s.entries.forEach(e=>{if(e.type==='fuerza') addEx(e.exId,e.name)}));
+  const selEx=exs.find(e=>e.ids.includes(S.progEx))||exs[0], sel=selEx&&selEx.id;
+  h+=`<section class="section"><div class="section-h"><h2>Por ejercicio</h2></div><div class="card"><div class="field"><label for="progsel">Ejercicio</label><select id="progsel" data-act="prog">${exs.map(e=>`<option value="${esc(e.id)}" ${e.id===sel?'selected':''}>${esc(e.name)}</option>`).join('')}</select></div>${chart(sel,selEx?selEx.ids:[sel])}</div></section>`;
   h+=`<section class="section"><div class="section-h"><h2>Historial</h2><span>${S.sessions.length} sesiones</span></div><div class="group">`+S.sessions.map(s=>{
     const open=S.openSess===s.id, c=colorOf(s.routine);
     let body='';
@@ -532,13 +534,13 @@ function viewHist(){
   return h;
 }
 
-function chart(exId){
+function chart(exId,ids){ ids=ids||[exId];
   // Con peso: fuerza estimada (1RM, fórmula de Epley), así subir repeticiones con el mismo peso también se ve.
   // Peso corporal (todas las series en 0 kg): repeticiones de la mejor serie.
   const e1=x=>x.w*(1+x.r/30);
   const name=((S.plan.routines&&Object.values(S.plan.routines).flatMap(r=>r.exercises).find(e=>e.id===exId))||{}).name||'';
   const isBW=/^(dom|fondos)$/.test(exId)||/dominad|fondo|dips|paralelas/i.test(name), BWk=S.plan.bodyKg||88;
-  const raw=S.sessions.slice().reverse().map(s=>{const e=s.entries.find(x=>x.exId===exId); if(!e||!e.sets||!e.sets.length) return null; const ok=e.sets.filter(x=>x.r>0); return ok.length?{d:s.date,sets:ok}:null}).filter(Boolean).slice(-16);
+  const raw=S.sessions.slice().reverse().map(s=>{const e=s.entries.find(x=>ids.includes(x.exId)); if(!e||!e.sets||!e.sets.length) return null; const ok=e.sets.filter(x=>x.r>0); return ok.length?{d:s.date,sets:ok}:null}).filter(Boolean).slice(-16);
   if(!raw.length) return `<div class="muted" style="font-size:.9rem;padding:8px 0">Sin datos de este ejercicio todavía.</div>`;
   const bw=raw.every(p=>p.sets.every(x=>!x.w)), lastre=isBW&&!bw;
   const load=x=>lastre?(BWk+x.w)*(1+x.r/30):e1(x);
