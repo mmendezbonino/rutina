@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.10.27-1";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.10.27-2";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -461,7 +461,10 @@ function tick(){
   if(!S.timer){el.hidden=true;return}
   const left=(S.timer.end-Date.now())/1000;
   if(left<=0){const hidden=document.visibilityState!=='visible', sw=!!(navigator.serviceWorker&&navigator.serviceWorker.controller); S.timer=null; clearInterval(tick._i); tick._i=null; el.hidden=true; wakeLock(false);
-    if(NATIVE){ try{NATIVE.keepScreenOn(false); if(!hidden) NATIVE.cancelRest()}catch(e){} if(!hidden){beep(); toast('Descanso terminado')} return }
+    if(NATIVE){ const v2=(()=>{try{return NATIVE.version()>=2}catch(e){return false}})(), late=left<-1.5;
+      try{NATIVE.keepScreenOn(false); if(!hidden&&!v2) NATIVE.cancelRest()}catch(e){}
+      // app nueva: el pitido lo hace Android a la hora exacta; acá no se repite al volver a abrir la app
+      if(!hidden&&!late){ if(!v2) beep(); toast('Descanso terminado') } return }
     if(!hidden){beep(); toast('Descanso terminado')} else if(!sw) notifyDone(); return}
   el.hidden=false; el.className='timer';
   const C=2*Math.PI*30, fr=Math.max(0,Math.min(1,left/S.timer.total)), nx=S.workout?curLabel(S.workout):'';

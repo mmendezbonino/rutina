@@ -7,28 +7,25 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.media.AudioAttributes;
-import android.media.RingtoneManager;
 import android.os.Build;
 
 /** Alarma del fin del descanso: la programa el sistema, así suena aunque la app esté cerrada o la pantalla apagada. */
 final class Notif {
-    static final String CH = "descanso";
+    static final String CH = "descanso2"; // sin sonido propio: el pitido lo hace beep() por el canal de la música
+    static final String OLD_CH = "descanso";
     static final int ID = 5;
     static final long[] VIB = {0, 300, 120, 300, 120, 300};
 
     static void channel(Context c) {
         if (Build.VERSION.SDK_INT < 26) return;
+        NotificationManager nm = c.getSystemService(NotificationManager.class);
+        try { nm.deleteNotificationChannel(OLD_CH); } catch (Exception e) { /* ya no estaba */ }
         NotificationChannel ch = new NotificationChannel(CH, "Fin del descanso", NotificationManager.IMPORTANCE_HIGH);
         ch.setDescription("Aviso cuando termina el descanso entre series");
         ch.enableVibration(true);
         ch.setVibrationPattern(VIB);
-        AudioAttributes aa = new AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .build();
-        ch.setSound(RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION), aa);
-        c.getSystemService(NotificationManager.class).createNotificationChannel(ch);
+        ch.setSound(null, null);
+        nm.createNotificationChannel(ch);
     }
 
     private static PendingIntent alarmIntent(Context c) {
@@ -68,13 +65,23 @@ final class Notif {
                 .setContentIntent(openIntent(c, 3))
                 .setCategory(Notification.CATEGORY_ALARM);
         if (Build.VERSION.SDK_INT < 26) {
-            b.setPriority(Notification.PRIORITY_HIGH).setVibrate(VIB).setDefaults(Notification.DEFAULT_SOUND);
+            b.setPriority(Notification.PRIORITY_HIGH).setVibrate(VIB);
         }
         try {
             ((NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE)).notify(ID, b.build());
         } catch (SecurityException e) {
             // sin permiso de notificaciones
         }
+    }
+
+    /** Tres pitidos por el canal de la música: suenan aunque el celular esté en vibrar y no le bajan el volumen a lo que estés escuchando. */
+    static void beep() {
+        try {
+            final android.media.ToneGenerator tg = new android.media.ToneGenerator(android.media.AudioManager.STREAM_MUSIC, 100);
+            final android.os.Handler h = new android.os.Handler(android.os.Looper.getMainLooper());
+            for (int k = 0; k < 3; k++) h.postDelayed(() -> tg.startTone(android.media.ToneGenerator.TONE_PROP_BEEP, 180), k * 320L);
+            h.postDelayed(tg::release, 1400);
+        } catch (Exception e) { /* sin audio */ }
     }
 
     static String status(Context c) {
