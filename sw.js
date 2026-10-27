@@ -1,5 +1,5 @@
 // Service worker de Cuaderno de Rutina: guarda la app para abrir rápido y sin conexión.
-const VERSION='2026.10.26-10';
+const VERSION='2026.10.27-1';
 const CACHE='rutina-'+VERSION;
 const ASSETS=['./','index.html','anim3d.js','male.glb','lib/three.min.js','lib/GLTFLoader.js','manifest.webmanifest',
   'icons/icon-192.png','icons/icon-512.png','icons/maskable-512.png','icons/apple-touch-icon.png'];

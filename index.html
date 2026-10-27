@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.10.26-10";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.10.27-1";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -468,7 +468,7 @@ function tick(){
   el.innerHTML=`<div class="timer-in" role="timer" aria-live="off"><svg class="ring" viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="30" fill="none" stroke="var(--accent-soft)" stroke-width="7"/><circle cx="36" cy="36" r="30" fill="none" stroke="var(--azul)" stroke-width="7" stroke-linecap="round" stroke-dasharray="${(C*fr).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 36 36)"/><text x="36" y="42" text-anchor="middle">${mmss(left)}</text></svg><div class="timer-l"><b>Descansando</b>${nx?`<span class="nx">Sigue: <b>${esc(nx)}</b></span>`:''}<div class="timer-btns"><button class="btn sm" data-act="t-">−15 s</button><button class="btn sm" data-act="t+">+15 s</button><button class="btn sm primary" data-act="tskip">Saltar</button></div></div></div>`;
   if(!tick._i) tick._i=setInterval(tick,250);
 }
-document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ if(S.timer){wakeLock(true); tick()} } });
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ if(S.timer){wakeLock(true); tick()} if(NATIVE&&S.tab==='rut') render() } });
 
 // ---------- figuras animadas (dibujo propio, una por patrón de movimiento) ----------
 const RM = (()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return false}})();
@@ -540,6 +540,7 @@ function viewHoy(){
     const short=k?esc(S.plan.routines[k].name.split(/[·,]/)[0].trim()):'Descanso';
     return `<button data-act="pick" data-k="${k}" data-d="${d}" aria-pressed="${d===selDow}" class="${d===dow?'today':''}"><span class="wd">${DAYNAMES[d].slice(0,3)}</span><span class="dn">${dt.getDate()}</span><span class="rn">${short}</span>${trained.has(dt.toDateString())?'<i class="ok" aria-label="Entrenado"></i>':''}</button>`}).join('');
   h+=`<div class="week" role="group" aria-label="Elegir día">${cells}</div>`;
+  { const pb=notifProblem(nativeStatus()); if(pb) h+=`<button class="confirm" style="text-align:left;border:1.5px solid var(--rojo);background:var(--rojo-soft)" data-act="tab-rut"><span style="flex:1"><b style="color:var(--rojo)">${pb}.</b> El descanso no te va a avisar con la pantalla apagada. Tocá para arreglarlo.</span></button>` }
   if(!key) return h+`<div class="empty">Hoy no tenés rutina programada.<br>Elegí una arriba si querés entrenar igual.</div>`+cloudNote();
   const r=S.plan.routines[key], c=colorOf(key);
   h+=`<div class="group">`+r.exercises.map((ex,i)=>{
@@ -691,6 +692,7 @@ function viewRut(){
   </div>`:`<button class="btn" data-act="addex">${IC.plus} Agregar ejercicio</button>`)+`</section>`;
   h+=`<div style="display:flex;gap:8px"><button class="btn primary" style="flex:1" data-act="esave">Guardar cambios</button><button class="btn" data-act="ereset">Descartar</button></div>`;
   h+=`<section class="section"><div class="section-h"><h2>Semana</h2></div><div class="group sched">${[1,2,3,4,5,6,0].map(dw=>`<div class="row"><label class="row-main row-title" for="sch-${dw}">${DAYNAMES[dw]}</label><select id="sch-${dw}" data-act="sched" data-d="${dw}"><option value="">Descanso</option>${keys.map(k=>`<option value="${k}" ${S.plan.schedule[dw]===k?'selected':''}>${esc(S.plan.routines[k].name)}</option>`).join('')}</select></div>`).join('')}</div></section>`;
+  h+=avisosSection();
   h+=backupSection();
   return h;
 }
@@ -708,6 +710,19 @@ function render(){
 // ---------- respaldo ----------
 const IS_PWA=!!window.__PWA, APP_VERSION=window.__APP_VERSION||'';
 function backupJSON(){return JSON.stringify({app:'cuaderno-rutina',v:1,exportedAt:new Date().toISOString(),plan:S.plan,sessions:S.sessions.map(({_id,...r})=>r)})}
+// avisos de descanso en la app de Android: muestra si están bloqueados y deja probarlos
+const APK_URL='https://github.com/mmendezbonino/rutina/releases/download/apk/cuaderno-rutina.apk';
+function nativeStatus(){ if(!NATIVE) return null; try{ if(!NATIVE.version||NATIVE.version()<2) return {old:true}; return JSON.parse(NATIVE.status()) }catch(e){ return {old:true} } }
+function notifProblem(st){ if(!st||st.old) return ''; if(!st.on) return 'Las notificaciones de la app están apagadas'; if(st.imp===0) return 'El canal «Fin del descanso» está bloqueado'; if(st.imp>0&&st.imp<3) return 'El aviso está configurado sin sonido'; return '' }
+function avisosSection(){ const st=nativeStatus(); if(!st) return '';
+  let h=`<section class="section"><div class="section-h"><h2>Aviso de descanso</h2></div><div class="card" style="gap:12px">`;
+  if(st.old) h+=`<p class="muted" style="margin:0;font-size:.9rem">Hay una versión nueva de la app de Android que revisa por qué no te llega el aviso. Bajala e instalala encima (no se borra nada).</p><a class="btn primary" href="${APK_URL}">Bajar la app nueva</a>`;
+  else { const pb=notifProblem(st);
+    h+= pb ? `<p style="margin:0;font-weight:700;color:var(--rojo)">${pb}</p><p class="muted" style="margin:0;font-size:.88rem">Por eso solo suena cuando volvés a la app. Tocá abajo, activá las notificaciones y el sonido de «Fin del descanso».</p><button class="btn primary" data-act="n-set">Abrir ajustes de notificaciones</button>`
+           : `<p class="muted" style="margin:0;font-size:.88rem">Los avisos están activados${st.exact?'':' (sin alarma exacta: puede llegar con unos segundos de atraso)'}. Probalo: tocá el botón, apagá la pantalla y esperá 10 segundos.</p>`;
+    h+=`<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn${pb?'':' primary'}" data-act="n-test">Probar aviso en 10 s</button>${pb?'':'<button class="btn" data-act="n-set">Ajustes</button>'}</div>`; }
+  return h+`</div></section>`;
+}
 function backupSection(){
   let h=`<section class="section"><div class="section-h"><h2>Respaldo</h2><span>${S.sessions.length} sesiones</span></div><div class="card" style="gap:12px">`;
   h+=IS_PWA
@@ -793,6 +808,9 @@ document.addEventListener('click',async ev=>{
     case 'ekey': S.editKey=t.dataset.k; S.editDraft=null; S.addOpen=false; render(); break;
     case 'up': case 'down': {const ex=S.editDraft.exercises, j=a==='up'?i-1:i+1; [ex[i],ex[j]]=[ex[j],ex[i]]; render(); break}
     case 'rmex': S.editDraft.exercises.splice(i,1); render(); break;
+    case 'tab-rut': S.tab='rut'; render(); setTimeout(()=>{const e=[...document.querySelectorAll('h2')].find(x=>x.textContent==='Aviso de descanso'); if(e) e.scrollIntoView({block:'center'})},50); break;
+    case 'n-set': try{NATIVE.openSettings()}catch(e){} break;
+    case 'n-test': try{NATIVE.test(10); toast('Apagá la pantalla: suena en 10 s')}catch(e){} break;
     case 'addex': S.addOpen=!S.addOpen; render(); break;
     case 'addnew': S.addOpen=false; S.editDraft.exercises.push({id:uid('e'),name:'Nuevo ejercicio',type:'fuerza',sets:3,reps:'10-12',weight:0,rest:90}); render(); setTimeout(()=>{const el=document.getElementById('en-'+(S.editDraft.exercises.length-1)); if(el){el.focus(); el.select()}},50); break;
     case 'addpick': { const src=pickList().find(x=>x.id===t.dataset.id); if(!src) break; S.addOpen=false;

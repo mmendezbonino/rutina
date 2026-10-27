@@ -28,7 +28,7 @@ public class MainActivity extends Activity {
         super.onCreate(state);
         Notif.channel(this);
         web = new WebView(this);
-        web.setBackgroundColor(0xFF0C0E12);
+        web.setBackgroundColor(0xFFF4F6FA);
         setContentView(web);
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
@@ -99,6 +99,31 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public int version() { return 1; }
+        public int version() { return 2; }
+
+        /** Estado de los avisos: permiso, importancia del canal y si puede programar la alarma exacta. */
+        @JavascriptInterface
+        public String status() { return Notif.status(MainActivity.this); }
+
+        /** Abre los ajustes de notificaciones de la app (o pide el permiso si nunca se pidió). */
+        @JavascriptInterface
+        public void openSettings() {
+            runOnUiThread(() -> {
+                try {
+                    Intent i;
+                    if (Build.VERSION.SDK_INT >= 26) {
+                        i = new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName());
+                    } else {
+                        i = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + getPackageName()));
+                    }
+                    startActivity(i);
+                } catch (Exception e) { /* sin pantalla de ajustes */ }
+            });
+        }
+
+        /** Programa un aviso de prueba dentro de unos segundos. */
+        @JavascriptInterface
+        public void test(int sec) { Notif.schedule(MainActivity.this, System.currentTimeMillis() + sec * 1000L); }
     }
 }

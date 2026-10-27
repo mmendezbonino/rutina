@@ -77,5 +77,18 @@ final class Notif {
         }
     }
 
+    static String status(Context c) {
+        NotificationManager nm = c.getSystemService(NotificationManager.class);
+        boolean on = nm.areNotificationsEnabled();
+        int imp = -1;
+        if (Build.VERSION.SDK_INT >= 26) {
+            NotificationChannel ch = nm.getNotificationChannel(CH);
+            imp = ch == null ? -1 : ch.getImportance();
+        }
+        boolean exact = true;
+        if (Build.VERSION.SDK_INT >= 31) exact = ((AlarmManager) c.getSystemService(Context.ALARM_SERVICE)).canScheduleExactAlarms();
+        return "{\"on\":" + on + ",\"imp\":" + imp + ",\"exact\":" + exact + ",\"sdk\":" + Build.VERSION.SDK_INT + "}";
+    }
+
     private Notif() {}
 }
