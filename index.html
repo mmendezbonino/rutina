@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.11.09-1";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.11.09-2";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -324,19 +324,24 @@ const DEFAULT = {
       {id:'lat2',name:'Elevaciones laterales',type:'fuerza',sets:3,reps:'15',weight:10,rest:75},
       {id:'remo',name:'Remo (máquina, cardio)',type:'cardio',sets:1,reps:'12',weight:0,rest:0}
     ]},
-    piernas: {name:'Piernas', color:'piernas', exercises:[
-      {id:'hack',name:'Hack squat',type:'fuerza',sets:3,reps:'8-12',weight:0,rest:150},
-      {id:'prensa',name:'Prensa de piernas',type:'fuerza',sets:3,reps:'10-12',weight:135,rest:120},
-      {id:'gem',name:'Gemelo en prensa',type:'fuerza',sets:3,reps:'12-15',weight:0,rest:60},
+    piernas: {name:'Piernas · glúteo', color:'piernas', exercises:[
+      {id:'hiptL',name:'Hip thrust en máquina',type:'fuerza',sets:3,reps:'10-15',weight:0,rest:90},
+      {id:'prensag',name:'Prensa pies altos y abiertos',type:'fuerza',sets:3,reps:'12-15',weight:135,rest:90},
       {id:'hiper',name:'Hiperextensiones 45°',type:'fuerza',sets:3,reps:'12-15',weight:0,rest:75},
-      {id:'femsen',name:'Curl femoral sentado',type:'fuerza',sets:3,reps:'10-12',weight:45,rest:90},
-      {id:'ext',name:'Extensión de cuádriceps',type:'fuerza',sets:3,reps:'10-12',weight:68,rest:90},
-      {id:'abdm',name:'Abductores en máquina',type:'fuerza',sets:3,reps:'15',weight:0,rest:60},
-      {id:'addm',name:'Aductores en máquina',type:'fuerza',sets:3,reps:'15',weight:0,rest:60}
+      {id:'hiperlat',name:'Hiperextensiones laterales (por lado)',type:'fuerza',sets:3,reps:'12-15',weight:0,rest:60},
+      {id:'abdm',name:'Abductores en máquina',type:'fuerza',sets:2,reps:'15',weight:0,rest:60},
+      {id:'addm',name:'Aductores en máquina',type:'fuerza',sets:2,reps:'15',weight:0,rest:60}
+    ]},
+    piernas2: {name:'Piernas · pesado', color:'piernas', exercises:[
+      {id:'hack',name:'Hack squat',type:'fuerza',sets:3,reps:'6-10',weight:0,rest:150},
+      {id:'femsen',name:'Curl femoral sentado',type:'fuerza',sets:3,reps:'8-12',weight:45,rest:90},
+      {id:'hipt',name:'Hip thrust en máquina',type:'fuerza',sets:3,reps:'8-10',weight:0,rest:120},
+      {id:'ext',name:'Extensión de cuádriceps',type:'fuerza',sets:2,reps:'12-15',weight:68,rest:75},
+      {id:'gem',name:'Gemelo en prensa',type:'fuerza',sets:3,reps:'10-12',weight:0,rest:60}
     ]}
   },
-  planVersion: 3,
-  schedule: {1:'espalda',2:'pecho',3:'piernas',4:'espalda',5:'pecho'}
+  planVersion: 4,
+  schedule: {1:'espalda',2:'pecho',3:'piernas',4:'espalda',5:'pecho',6:'piernas2'}
 };
 
 const S = {tab:'hoy', plan:null, sessions:[], pick:null, workout:null, timer:null, editKey:'espalda', editDraft:null, progEx:null, store:null, confirmDel:null, openSess:null, confirmFinish:false};
@@ -383,6 +388,10 @@ const fmtDate = iso => new Date(iso).toLocaleDateString('es-UY',{weekday:'short'
 const mmss = s => {s=Math.max(0,Math.ceil(s)); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 const hms = ms => {const s=Math.floor(ms/1000), h=Math.floor(s/3600), m=Math.floor(s%3600/60); return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(s%60).padStart(2,'0')};
 function toast(t){const el=document.getElementById('toast'); el.textContent=t; el.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>el.hidden=true,2200)}
+// nombre corto para los casilleros: la primera parte del nombre, o la segunda si otra rutina empieza igual (Piernas · glúteo / Piernas · pesado)
+function shortName(k){ const parts=n=>String(n||'').split(/[·,]/).map(x=>x.trim()).filter(Boolean);
+  const me=parts(S.plan.routines[k].name), dup=Object.entries(S.plan.routines).some(([k2,r])=>k2!==k&&parts(r.name)[0]===me[0]);
+  const t=dup&&me[1]?me[1]:me[0]||''; return t.charAt(0).toUpperCase()+t.slice(1) }
 const colorOf = key => {const r=S.plan.routines[key]; return COLORS[r&&r.color]||'var(--accent)'};
 const tileStyle = c => `background:color-mix(in srgb,${c} 16%,transparent);color:${c}`;
 const volOf = s => s.entries.reduce((b,e)=>b+(e.sets||[]).reduce((c,x)=>c+x.w*x.r,0),0);
@@ -489,6 +498,7 @@ const FIG = {
   tri:{s:['50,3 50,58','26,15 27,36','27,36 25,57','27,36 31,57','26,18 27,30'],c:[[26,9,4.5]],a:[['27,30 37,23','27,30 30,43'],['48,6 37,23','48,6 30,43']]},
   squat:{s:['20,58 44,58'],a:[['30,13 30,32','26,27 21,41'],['30,32 31,44 30,57','21,41 36,43 30,57'],['30,16 39,25','26,29 40,31']],ac:[[30,8,26,22,4.5]]},
   calf:{s:['22,58 42,58'],g:'0 0;0 -5;0 0',m:['31,15 31,36','31,36 29,55','31,36 34,55','31,18 31,33'],mc:[[31,9,4.5]]},
+  thrust:{s:['4,40 18,40','44,57 54,57'],c:[[9,33,4.5]],a:[['15,37 32,50 45,42 47,57','15,37 32,37 45,37 47,57']],ac:[[32,50,32,37,3.4]]},
   hinge:{s:['30,38 48,54','26,40 34,40'],a:[['30,37 24,52','30,37 13,27']],ac:[[22,57,8,24,4.5]]},
   ext:{s:['10,42 34,42','18,42 16,21','34,42 34,48'],c:[[15,15,4.5]],a:[['34,42 35,58','34,42 52,37']]},
   legcurl:{s:['10,42 34,42','18,42 16,21'],c:[[15,15,4.5]],a:[['34,42 52,40','34,42 27,56']]},
@@ -509,7 +519,7 @@ const FIG = {
 function patternOf(ex){
   const n=(ex.name||'').toLowerCase();
   if(ex.type==='cardio') return 'rower';
-  const R=[[/(gemelo|pantorr|calf).*prensa|prensa.*(gemelo|pantorr)/,'calfpress'],[/gemelo|pantorr|calf/,'calf'],[/cu[aá]driceps|extensi[oó]n de pierna/,'ext'],[/femoral|isquio/,'legcurl'],[/skull|franc[eé]s|rompecr/,'skull'],[/fondo|dips/,'dips'],[/pushdown|tr[ií]ceps|soga/,'tri'],[/dominad|jal[oó]n|pulldown/,'pull'],[/rear delt|face pull|p[aá]jaro|deltoide post/,'rdelt'],[/remo/,'row'],[/abduc/,'abd'],[/aduc/,'add'],[/hiperext|lumbar|rumano|peso muerto|hip thrust/,'hinge'],[/hack/,'hack'],[/prensa/,'legpress'],[/sentadilla|squat|zancada/,'squat'],[/predicador|scott/,'preacher'],[/martillo|hammer/,'hammer'],[/curl|b[ií]ceps/,'curl'],[/lateral|elevaci|militar/,'raise'],[/inclinad/,'incline'],[/apertura|pec ?deck|fly|cruce/,'fly'],[/press|banca|pecho/,'press']];
+  const R=[[/(gemelo|pantorr|calf).*prensa|prensa.*(gemelo|pantorr)/,'calfpress'],[/gemelo|pantorr|calf/,'calf'],[/cu[aá]driceps|extensi[oó]n de pierna/,'ext'],[/femoral|isquio/,'legcurl'],[/skull|franc[eé]s|rompecr/,'skull'],[/fondo|dips/,'dips'],[/pushdown|tr[ií]ceps|soga/,'tri'],[/dominad|jal[oó]n|pulldown/,'pull'],[/rear delt|face pull|p[aá]jaro|deltoide post/,'rdelt'],[/remo/,'row'],[/abduc/,'abd'],[/aduc/,'add'],[/hip ?thrust|puente de gl/,'thrust'],[/hiperext|lumbar|rumano|peso muerto/,'hinge'],[/hack/,'hack'],[/prensa/,'legpress'],[/sentadilla|squat|zancada/,'squat'],[/predicador|scott/,'preacher'],[/martillo|hammer/,'hammer'],[/curl|b[ií]ceps/,'curl'],[/lateral|elevaci|militar/,'raise'],[/inclinad/,'incline'],[/apertura|pec ?deck|fly|cruce/,'fly'],[/press|banca|pecho/,'press']];
   for(const [re,p] of R) if(re.test(n)) return p;
   return 'curl';
 }
@@ -545,7 +555,7 @@ function viewHoy(){
   const selDow=S.pickDow!=null?S.pickDow:dow;
   const trained=new Set(S.sessions.map(x=>new Date(x.date).toDateString()));
   const cells=[1,2,3,4,5,6,0].filter(d=>S.plan.schedule[d]||d===dow).map(d=>{const dt=new Date(mon); dt.setDate(mon.getDate()+((d+6)%7)); const k=S.plan.schedule[d]||'';
-    const short=k?esc(S.plan.routines[k].name.split(/[·,]/)[0].trim()):'Descanso';
+    const short=k?esc(shortName(k)):'Descanso';
     return `<button data-act="pick" data-k="${k}" data-d="${d}" aria-pressed="${d===selDow}" class="${d===dow?'today':''}"><span class="wd">${DAYNAMES[d].slice(0,3)}</span><span class="dn">${dt.getDate()}</span><span class="rn">${short}</span>${trained.has(dt.toDateString())?'<i class="ok" aria-label="Entrenado"></i>':''}</button>`}).join('');
   h+=`<div class="week" role="group" aria-label="Elegir día">${cells}</div>`;
   { const ns=nativeStatus(); if(ns&&ns.old) h+=`<a class="confirm" style="text-align:left;text-decoration:none;color:var(--fg);border:1.5px solid var(--azul);background:var(--accent-soft)" href="${APK_URL}"><span style="flex:1"><b style="color:var(--azul)">Hay una app de Android nueva.</b> Tocá para bajarla e instalala encima; no se borra nada.</span></a>` }
@@ -680,7 +690,7 @@ function viewRut(){
   const d=S.editDraft;
   let h=`<header><div class="over">Tu plan</div><h1>Rutinas</h1></header>`;
   h+=`<div class="week rsel" role="group" aria-label="Elegir rutina">${keys.map(k=>{const r=S.plan.routines[k]; const days=[1,2,3,4,5,6,0].filter(d=>S.plan.schedule[d]===k).map(d=>DAYNAMES[d].slice(0,3)).join(' · ');
-    return `<button data-act="ekey" data-k="${k}" aria-pressed="${k===S.editKey}"><span class="wd">${days||'Sin día'}</span><span class="dn">${esc(r.name.split(/[·,]/)[0].trim())}</span><span class="rn">${r.exercises.length} ejercicios</span></button>`}).join('')}</div>`;
+    return `<button data-act="ekey" data-k="${k}" aria-pressed="${k===S.editKey}"><span class="wd">${days||'Sin día'}</span><span class="dn">${esc(shortName(k))}</span><span class="rn">${r.exercises.length} ejercicio${r.exercises.length===1?'':'s'}</span></button>`}).join('')}</div>`;
   h+=`<div class="field"><label for="rname">Nombre de la rutina</label><input id="rname" data-ef="rname" value="${esc(d.name)}"></div>`;
   h+=`<section class="section"><div class="section-h"><h2>Ejercicios</h2><span>${d.exercises.length}</span></div>`+d.exercises.map((e,i)=>`<div class="ed">
     <div class="ed-h"><input id="en-${i}" aria-label="Nombre del ejercicio ${i+1}" data-ef="name" data-i="${i}" value="${esc(e.name)}">
@@ -867,6 +877,12 @@ document.addEventListener('change',async ev=>{
       if(v<3){ // skull crusher → fondos en paralelas (se mantiene el resto de la rutina tal cual)
         const r=S.plan.routines.pecho, i=r?r.exercises.findIndex(e=>e.id==='skull'||/skull/i.test(e.name||'')):-1;
         if(i>=0){ r.exercises[i]={id:'fondos',name:'Fondos en paralelas',type:'fuerza',sets:3,reps:'8-12',weight:0,rest:120}; msg='Skull crusher cambiado por fondos' }
+      }
+      if(v<4){ // piernas dos veces: miércoles glúteo con más reps, sábado pesado (se conservan los pesos que ya tenías)
+        const old=(S.plan.routines.piernas||{exercises:[]}).exercises, w=id=>{const e=old.find(x=>x.id===id); return e?e.weight:undefined};
+        const mk=k=>{const r=JSON.parse(JSON.stringify(DEFAULT.routines[k])); r.exercises.forEach(e=>{const src=e.id==='prensag'?w('prensa'):w(e.id); if(src!=null) e.weight=src}); return r};
+        S.plan.routines.piernas=mk('piernas'); S.plan.routines.piernas2=mk('piernas2');
+        S.plan.schedule=Object.assign({},S.plan.schedule,{3:'piernas',6:'piernas2'}); msg='Piernas dos veces: miércoles glúteo, sábado pesado';
       }
       if(v<DEFAULT.planVersion){ S.plan.planVersion=DEFAULT.planVersion; try{await S.store.savePlan(S.plan); if(msg) setTimeout(()=>toast(msg),400)}catch(e){} }
     }
