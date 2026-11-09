@@ -74,6 +74,18 @@ final class Notif {
         }
     }
 
+    private static long lastFire = 0;
+
+    /** Fin del descanso: notificación + vibración + pitido. Si ya avisó hace instantes (el servicio y la alarma de respaldo) no repite. */
+    static synchronized void fire(Context c) {
+        long now = System.currentTimeMillis();
+        if (now - lastFire < 10000) return;
+        lastFire = now;
+        RestService.end = 0;
+        show(c);
+        beep();
+    }
+
     /** Tres pitidos por el canal de la música: suenan aunque el celular esté en vibrar y no le bajan el volumen a lo que estés escuchando. */
     static void beep() {
         try {

@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.10.27-2";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.11.09-1";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -451,7 +451,8 @@ async function notifyDone(){
   }catch(e){}
 }
 const NATIVE=window.RutinaNative||null; // app Android: el aviso lo programa el sistema con una alarma
-function swTimer(){ if(NATIVE){try{ if(S.timer){NATIVE.scheduleRest(S.timer.end); NATIVE.keepScreenOn(true)} else {NATIVE.cancelRest(); NATIVE.keepScreenOn(false)} }catch(e){} return }
+function nativeV(){ try{return NATIVE&&NATIVE.version?NATIVE.version():0}catch(e){return 0} }
+function swTimer(){ if(NATIVE){try{ if(S.timer){ if(nativeV()>=3) NATIVE.startRest(S.timer.end, S.workout?curLabel(S.workout):''); else NATIVE.scheduleRest(S.timer.end); NATIVE.keepScreenOn(true)} else {NATIVE.cancelRest(); NATIVE.keepScreenOn(false)} }catch(e){} return }
   try{const c=navigator.serviceWorker&&navigator.serviceWorker.controller; if(c) c.postMessage(S.timer?{type:'rest',end:S.timer.end}:{type:'rest-cancel'})}catch(e){}}
 function startTimer(sec){ if(!sec) return;
   S.timer={end:Date.now()+sec*1000,total:sec}; if(!NATIVE) askNotif(); wakeLock(true); swTimer(); tick(); }
@@ -471,7 +472,11 @@ function tick(){
   el.innerHTML=`<div class="timer-in" role="timer" aria-live="off"><svg class="ring" viewBox="0 0 72 72" aria-hidden="true"><circle cx="36" cy="36" r="30" fill="none" stroke="var(--accent-soft)" stroke-width="7"/><circle cx="36" cy="36" r="30" fill="none" stroke="var(--azul)" stroke-width="7" stroke-linecap="round" stroke-dasharray="${(C*fr).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 36 36)"/><text x="36" y="42" text-anchor="middle">${mmss(left)}</text></svg><div class="timer-l"><b>Descansando</b>${nx?`<span class="nx">Sigue: <b>${esc(nx)}</b></span>`:''}<div class="timer-btns"><button class="btn sm" data-act="t-">−15 s</button><button class="btn sm" data-act="t+">+15 s</button><button class="btn sm primary" data-act="tskip">Saltar</button></div></div></div>`;
   if(!tick._i) tick._i=setInterval(tick,250);
 }
-document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ if(S.timer){wakeLock(true); tick()} if(NATIVE&&S.tab==='rut') render() } });
+// si tocaste +15 s o Saltar en la notificación (o ya sonó), la app se pone al día con Android al volver
+function syncNative(){ if(!S.timer||nativeV()<3) return; try{ const e=+NATIVE.restEnd()||0;
+  if(e===0){ if(S.timer.end-Date.now()>1500){ S.timer=null; clearInterval(tick._i); tick._i=null; document.getElementById('timer').hidden=true; try{NATIVE.keepScreenOn(false)}catch(_){} } }
+  else if(Math.abs(e-S.timer.end)>500){ S.timer.total+=Math.max(0,(e-S.timer.end)/1000); S.timer.end=e } }catch(_){} }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ syncNative(); if(S.timer){wakeLock(true); tick()} if(NATIVE&&S.tab==='rut') render() } });
 
 // ---------- figuras animadas (dibujo propio, una por patrón de movimiento) ----------
 const RM = (()=>{try{return matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return false}})();
@@ -543,6 +548,7 @@ function viewHoy(){
     const short=k?esc(S.plan.routines[k].name.split(/[·,]/)[0].trim()):'Descanso';
     return `<button data-act="pick" data-k="${k}" data-d="${d}" aria-pressed="${d===selDow}" class="${d===dow?'today':''}"><span class="wd">${DAYNAMES[d].slice(0,3)}</span><span class="dn">${dt.getDate()}</span><span class="rn">${short}</span>${trained.has(dt.toDateString())?'<i class="ok" aria-label="Entrenado"></i>':''}</button>`}).join('');
   h+=`<div class="week" role="group" aria-label="Elegir día">${cells}</div>`;
+  { const ns=nativeStatus(); if(ns&&ns.old) h+=`<a class="confirm" style="text-align:left;text-decoration:none;color:var(--fg);border:1.5px solid var(--azul);background:var(--accent-soft)" href="${APK_URL}"><span style="flex:1"><b style="color:var(--azul)">Hay una app de Android nueva.</b> Tocá para bajarla e instalala encima; no se borra nada.</span></a>` }
   { const pb=notifProblem(nativeStatus()); if(pb) h+=`<button class="confirm" style="text-align:left;border:1.5px solid var(--rojo);background:var(--rojo-soft)" data-act="tab-rut"><span style="flex:1"><b style="color:var(--rojo)">${pb}.</b> El descanso no te va a avisar con la pantalla apagada. Tocá para arreglarlo.</span></button>` }
   if(!key) return h+`<div class="empty">Hoy no tenés rutina programada.<br>Elegí una arriba si querés entrenar igual.</div>`+cloudNote();
   const r=S.plan.routines[key], c=colorOf(key);
@@ -715,11 +721,12 @@ const IS_PWA=!!window.__PWA, APP_VERSION=window.__APP_VERSION||'';
 function backupJSON(){return JSON.stringify({app:'cuaderno-rutina',v:1,exportedAt:new Date().toISOString(),plan:S.plan,sessions:S.sessions.map(({_id,...r})=>r)})}
 // avisos de descanso en la app de Android: muestra si están bloqueados y deja probarlos
 const APK_URL='https://github.com/mmendezbonino/rutina/releases/download/apk/cuaderno-rutina.apk';
-function nativeStatus(){ if(!NATIVE) return null; try{ if(!NATIVE.version||NATIVE.version()<2) return {old:true}; return JSON.parse(NATIVE.status()) }catch(e){ return {old:true} } }
+const APK_V=3; // versión del puente Android que trae la última APK publicada
+function nativeStatus(){ if(!NATIVE) return null; try{ if(!NATIVE.version||NATIVE.version()<APK_V) return {old:true}; return JSON.parse(NATIVE.status()) }catch(e){ return {old:true} } }
 function notifProblem(st){ if(!st||st.old) return ''; if(!st.on) return 'Las notificaciones de la app están apagadas'; if(st.imp===0) return 'El canal «Fin del descanso» está bloqueado'; if(st.imp>0&&st.imp<3) return 'El aviso está configurado sin sonido'; return '' }
 function avisosSection(){ const st=nativeStatus(); if(!st) return '';
   let h=`<section class="section"><div class="section-h"><h2>Aviso de descanso</h2></div><div class="card" style="gap:12px">`;
-  if(st.old) h+=`<p class="muted" style="margin:0;font-size:.9rem">Hay una versión nueva de la app de Android que revisa por qué no te llega el aviso. Bajala e instalala encima (no se borra nada).</p><a class="btn primary" href="${APK_URL}">Bajar la app nueva</a>`;
+  if(st.old) h+=`<p class="muted" style="margin:0;font-size:.9rem">Hay una versión nueva de la app de Android: el descanso aparece con su cuenta regresiva en la pantalla de bloqueo y el pitido suena en hora con la pantalla apagada. Bajala e instalala encima (no se borra nada).</p><a class="btn primary" href="${APK_URL}">Bajar la app nueva</a>`;
   else { const pb=notifProblem(st);
     h+= pb ? `<p style="margin:0;font-weight:700;color:var(--rojo)">${pb}</p><p class="muted" style="margin:0;font-size:.88rem">Por eso solo suena cuando volvés a la app. Tocá abajo, activá las notificaciones y el sonido de «Fin del descanso».</p><button class="btn primary" data-act="n-set">Abrir ajustes de notificaciones</button>`
            : `<p class="muted" style="margin:0;font-size:.88rem">Los avisos están activados${st.exact?'':' (sin alarma exacta: puede llegar con unos segundos de atraso)'}. Probalo: tocá el botón, apagá la pantalla y esperá 10 segundos.</p>`;

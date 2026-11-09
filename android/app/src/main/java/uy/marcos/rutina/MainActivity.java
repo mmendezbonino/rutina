@@ -85,10 +85,21 @@ public class MainActivity extends Activity {
     /** Lo que la página puede pedirle a Android. */
     class Bridge {
         @JavascriptInterface
-        public void scheduleRest(double endMs) { Notif.schedule(MainActivity.this, (long) endMs); }
+        public void scheduleRest(double endMs) { startRest(endMs, ""); }
+
+        /** Arranca el descanso: alarma de respaldo + cuenta regresiva en la pantalla de bloqueo. */
+        @JavascriptInterface
+        public void startRest(double endMs, String next) {
+            Notif.schedule(MainActivity.this, (long) endMs);
+            RestService.start(MainActivity.this, (long) endMs, next);
+        }
+
+        /** Hora en que termina el descanso según Android (cambia si tocaste +15 s o Saltar en la notificación); 0 si no hay. */
+        @JavascriptInterface
+        public double restEnd() { return RestService.end; }
 
         @JavascriptInterface
-        public void cancelRest() { Notif.cancel(MainActivity.this); }
+        public void cancelRest() { Notif.cancel(MainActivity.this); RestService.stop(MainActivity.this); }
 
         @JavascriptInterface
         public void keepScreenOn(final boolean on) {
@@ -99,7 +110,7 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public int version() { return 2; }
+        public int version() { return 3; }
 
         /** Estado de los avisos: permiso, importancia del canal y si puede programar la alarma exacta. */
         @JavascriptInterface

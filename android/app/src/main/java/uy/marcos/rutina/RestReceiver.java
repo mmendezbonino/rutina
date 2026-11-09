@@ -9,8 +9,7 @@ public class RestReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context c, Intent i) {
         final PendingResult pr = goAsync();
-        Notif.show(c);
-        Notif.beep();
+        Notif.fire(c);
         new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(pr::finish, 1600);
     }
 }
