@@ -152,7 +152,10 @@ public class RestService extends Service {
                 .addAction(new Notification.Action.Builder(0, "+15 s", act("add", 11)).build())
                 .addAction(new Notification.Action.Builder(0, "Saltar", act("skip", 12)).build());
         // Android 16 / One UI 8: pide mostrarse como "actualización en vivo" (la barra de abajo de la pantalla de bloqueo)
-        if (Build.VERSION.SDK_INT >= 36) b.setRequestPromotedOngoing(true);
+        // (lo mismo que hace NotificationCompat: el pedido va como extra)
+        android.os.Bundle ex = new android.os.Bundle();
+        ex.putBoolean("android.requestPromotedOngoing", true);
+        b.addExtras(ex);
         return b.build();
     }
 
