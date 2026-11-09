@@ -2,11 +2,11 @@ plugins { id 'com.android.application' }
 def vc = Integer.parseInt((project.findProperty('vc') ?: '1').toString())
 android {
     namespace 'uy.marcos.rutina'
-    compileSdk 34
+    compileSdk 36
     defaultConfig {
         applicationId 'uy.marcos.rutina'
         minSdk 24
-        targetSdk 34
+        targetSdk 36
         versionCode vc
         versionName "1.${vc}"
     }

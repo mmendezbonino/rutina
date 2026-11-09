@@ -7,7 +7,13 @@ import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.graphics.Insets;
+import android.view.View;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
+import android.widget.LinearLayout;
+import android.window.OnBackInvokedDispatcher;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -29,7 +35,37 @@ public class MainActivity extends Activity {
         Notif.channel(this);
         web = new WebView(this);
         web.setBackgroundColor(0xFFF4F6FA);
-        setContentView(web);
+        if (Build.VERSION.SDK_INT >= 35) {
+            // Android 15+ dibuja la app detrás de las barras del sistema: arriba una franja azul (como el encabezado)
+            // y abajo una blanca (como la barra de pestañas), del alto de cada barra o del teclado
+            final LinearLayout root = new LinearLayout(this);
+            root.setOrientation(LinearLayout.VERTICAL);
+            final View top = new View(this), bottom = new View(this);
+            top.setBackgroundColor(0xFF0B2A6B);
+            bottom.setBackgroundColor(0xFFFFFFFF);
+            root.addView(top, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0));
+            root.addView(web, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+            root.addView(bottom, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0));
+            root.setOnApplyWindowInsetsListener((v, ins) -> {
+                Insets bars = ins.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                Insets ime = ins.getInsets(WindowInsets.Type.ime());
+                top.getLayoutParams().height = bars.top;
+                bottom.getLayoutParams().height = Math.max(bars.bottom, ime.bottom);
+                top.requestLayout(); bottom.requestLayout();
+                return WindowInsets.CONSUMED;
+            });
+            setContentView(root);
+            WindowInsetsController wic = getWindow().getInsetsController();
+            if (wic != null) wic.setSystemBarsAppearance(WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS,
+                    WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS | WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS);
+        } else {
+            setContentView(web);
+        }
+        if (Build.VERSION.SDK_INT >= 33) {
+            // botón/gesto "atrás" en Android 13+
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+                    () -> { if (web.canGoBack()) web.goBack(); else finish(); });
+        }
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);

@@ -9,7 +9,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ServiceInfo;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -153,9 +152,7 @@ public class RestService extends Service {
                 .addAction(new Notification.Action.Builder(0, "+15 s", act("add", 11)).build())
                 .addAction(new Notification.Action.Builder(0, "Saltar", act("skip", 12)).build());
         // Android 16 / One UI 8: pide mostrarse como "actualización en vivo" (la barra de abajo de la pantalla de bloqueo)
-        Bundle ex = new Bundle();
-        ex.putBoolean("android.requestPromotedOngoing", true);
-        b.addExtras(ex);
+        if (Build.VERSION.SDK_INT >= 36) b.setRequestPromotedOngoing(true);
         return b.build();
     }
 
