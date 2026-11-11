@@ -59,6 +59,7 @@ const META=[
  {id:'hyper',name:'Hiperextensiones a 45°',main:['Lumbares','Glúteo'],sec:['Isquiotibiales'],lab:['Subí','Bajá controlado'],work:{lowback:1,glutes:.85,hams:.6},
   cam:{yaw:80,pitch:10,dist:3.4,ty:.8,tz:-.05},cue:'En el banco a 45°, con el apoyo justo debajo de la cadera y los tobillos trabados.',
   steps:['Cruzá los brazos sobre el pecho y bajá el torso doblándote desde la cadera.','Subí apretando el glúteo hasta que el cuerpo quede en línea recta.','No arquees la espalda de más arriba: pausá un segundo y bajá controlado.']},
+ {id:'stand',name:'Mapa de músculos',main:[],sec:[],lab:['',''],work:{},cam:{yaw:0,pitch:4,dist:4.2,ty:.95,tz:0},cue:'',steps:[]},
  {id:'hyperlat',name:'Hiperextensión lateral',main:['Oblicuos'],sec:['Cuadrado lumbar','Glúteo medio'],lab:['Subí de costado','Bajá controlado'],work:{obliques:1,lowback:.55,glutes:.35},
   cam:{yaw:75,pitch:12,dist:3.9,ty:.8,tz:.12},cue:'De costado en el banco de 45°, con la cadera apoyada en el borde del almohadón y los pies uno delante del otro bajo los rodillos.',
   steps:['Cruzá los brazos sobre el pecho, con el cuerpo de costado y en línea recta.','Bajá el torso hacia el piso doblando solo la cintura, sin girar.','Subí con los oblicuos hasta que el torso quede en línea con las piernas, no más arriba, y bajá controlado.']},
@@ -182,7 +183,7 @@ function setSeg(o,a,b){const d=b.clone().sub(a), l=d.length(); o.position.copy(a
 
 // ----- modelo y músculos -----
 const MG={pec:1,abs:2,lats:3,rhomb:4,traps:5,deltF:6,deltS:7,deltR:8,biceps:9,triceps:10,forearm:11,glutes:12,quads:13,hams:14,adductors:15,calves:16,lowback:17,obliques:18}, NG=19;
-const actU={value:new Array(NG).fill(0)}, redU={value:new T.Color(css('--muscle')).convertSRGBToLinear()};
+const actU={value:new Array(NG).fill(0)}, redU={value:new T.Color(css('--muscle')).convertSRGBToLinear()}, colU={value:Array.from({length:NG},()=>new T.Color(1,0,0))}, heatU={value:0};
 const MODEL=gltf.scene, BN={}, BIND={}, SKM=[];
 scene.add(MODEL);
 MODEL.traverse(o=>{if(o.isBone) BN[o.name]=o; if(o.isMesh){o.castShadow=true; o.receiveShadow=true; o.frustumCulled=false; if(o.isSkinnedMesh) SKM.push(o);
@@ -257,11 +258,11 @@ function classify(skm){
 }
 function patch(m){
   m.onBeforeCompile=sh=>{
-    sh.uniforms.uAct=actU; sh.uniforms.uRed=redU;
-    sh.vertexShader='attribute float mg;\nattribute float ms;\nuniform float uAct['+NG+'];\nvarying float vAct;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vAct=uAct[int(mg+0.5)]*ms;');
-    sh.fragmentShader='varying float vAct;\nuniform vec3 uRed;\n'+sh.fragmentShader
-      .replace('#include <map_fragment>','#include <map_fragment>\n diffuseColor.rgb=mix(diffuseColor.rgb,uRed,clamp(vAct,0.,1.)*.82);')
-      .replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\n totalEmissiveRadiance+=uRed*clamp(vAct,0.,1.)*.22;');
+    sh.uniforms.uAct=actU; sh.uniforms.uRed=redU; sh.uniforms.uCol=colU; sh.uniforms.uHeat=heatU;
+    sh.vertexShader='attribute float mg;\nattribute float ms;\nuniform float uAct['+NG+'];\nuniform vec3 uCol['+NG+'];\nvarying float vAct;\nvarying vec3 vCol;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vAct=uAct[int(mg+0.5)]*ms; vCol=uCol[int(mg+0.5)];');
+    sh.fragmentShader='varying float vAct;\nvarying vec3 vCol;\nuniform vec3 uRed;\nuniform float uHeat;\n'+sh.fragmentShader
+      .replace('#include <map_fragment>','#include <map_fragment>\n vec3 mc=mix(uRed,vCol,uHeat); diffuseColor.rgb=mix(diffuseColor.rgb,mc,clamp(vAct,0.,1.)*.82);')
+      .replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\n totalEmissiveRadiance+=mix(uRed,vCol,uHeat)*clamp(vAct,0.,1.)*.22;');
   };
   m.needsUpdate=true;
 }
@@ -419,6 +420,11 @@ rdelt:{
    return {f,arms,legs:seatedLegs(f)}},
  dyn(J,D){const f=J.f; B.place(D.pad,f.at(0,.38,.255),[f.L,f.U,f.F]); B.seg(D.stem,f.at(0,.38,.29),V(0,f.at(0,.38,0).y,.6));
    J.arms.forEach((a,i)=>{const hd=B.grip(a), y=f.sL.y+.16, k=i?'R':'L'; B.seg(D['lv'+k],V(0,y,.6),V(hd.x,y,hd.z)); B.seg(D['hd'+k],V(hd.x,y,hd.z),V(hd.x,hd.y-.08,hd.z))})}},
+stand:{
+ build(){},
+ pose(p){const f=frame(V(0,.958,0),Y,V(0,0,1));
+   const arms=[1,-1].map(s=>arm(f,s,at(f.sh(s),V(s*.28,-1,.05).normalize(),.93*LEN.R),V(s*.2,.1,-1)));
+   return {f,arms,legs:standLegs(f),grip:.35}}},
 lat:{
  build(){dumbbells(['aL','bL','hL','aR','bR','hR'])},
  pose(p){const f=frame(V(0,.958,0),Y,V(0,0,1)), th=rad(lerp(8,86,p)), sc=rad(15);
@@ -618,6 +624,7 @@ const LIFE={
  pull:{tempo:[1.2,.35,2.1,.5],life:p=>({scap:{e:lerp(2,-8,p),p:lerp(2,-10,p)},sp:{f:lerp(0,-8,p)},head:{p:lerp(-4,-14,p)},stab:.3,sway:.3})},
  row:{follow:1,tempo:[1,.6,2,.35],life:p=>({scap:{e:lerp(2,-2,p),p:lerp(8,-12,p)},sp:{f:lerp(8,-3,p)},stab:.7,sway:.2})},
  rdelt:{follow:1,tempo:[1,.45,2.1,.3],life:p=>({scap:{e:lerp(0,2,p),p:lerp(3,-14,p)},sp:{f:lerp(2,-3,p)},head:{p:-4},stab:.5,sway:.15})},
+ stand:{tempo:[1,1,1,1],life:()=>({sway:0})},
  lat:{follow:1,tempo:[1,.3,2.2,.35],life:p=>({scap:{e:lerp(0,5,p),p:lerp(0,3,p)},sp:{f:lerp(2,5,p)},stab:.8,sway:1})},
  preacher:{tempo:[1.1,.4,2.4,.25],life:p=>({scap:{e:lerp(0,2,p),p:6},sp:{f:3},head:{p:lerp(4,-22,p)},stab:.2,sway:.15})},
  hammer:{tempo:[1,.3,2.2,.3],life:p=>({scap:{e:lerp(0,2,p)},sp:{f:lerp(0,2,p)},stab:.8,sway:.3})},
@@ -693,7 +700,7 @@ function frameOnce(){
   for(let it=0;it<4;it++){let moved=false;
     J.arms.forEach(a=>{if(!a.t||!a.grip||!a.tt) return; const err=a.grip.clone().sub(a.tt); if(err.length()<.0008) return; a.off.sub(err); moved=true});
     if(!moved) break; placeBody(J)}
-  st.goff=J.arms.map(a=>a.off?a.off.clone().multiplyScalar(.9):null); const arr=actU.value; arr.fill(0); Object.entries(meta.work).forEach(([g,w])=>{if(MG[g]) arr[MG[g]]=w*Math.min(1,.2+.55*ph.effort*(.5+.5*p)+.25*p)});
+  st.goff=J.arms.map(a=>a.off?a.off.clone().multiplyScalar(.9):null); const arr=actU.value; arr.fill(0); if(st.heat) Object.entries(st.heat).forEach(([g,v])=>{if(MG[g]){arr[MG[g]]=v[0]; colU.value[MG[g]].set(v[1]).convertSRGBToLinear()}}); else Object.entries(meta.work).forEach(([g,w])=>{if(MG[g]) arr[MG[g]]=w*Math.min(1,.2+.55*ph.effort*(.5+.5*p)+.25*p)});
   J.p=p; if(def.dyn) def.dyn(J,DYN); if(DYN.stk) B.lift(DYN.stk,clamp(p));
   if(ui.ph){ui.ph.textContent=up?meta.lab[0]:meta.lab[1]; ui.ph.classList.toggle('up',up)}
   const c=st.camO||meta.cam, sway=(st.user||st.camO)?0:Math.sin(st.wall*.35)*rad(14);
@@ -714,7 +721,7 @@ new MutationObserver(retheme).observe(document.documentElement,{attributes:true,
 return {
   attach(host){if(st.host===host) return; st.host=host; buildUI(host)},
   show, start(){if(st.run) return; st.run=true; st.last=null; st.raf=requestAnimationFrame(loop)}, stop(){st.run=false; cancelAnimationFrame(st.raf)},
-  play(b){st.playing=b; sync()}, camO(c){st.camO=c}, grips(){return st.lastJ?st.lastJ.arms.map(a=>a.grip&&a.grip.toArray()):[]}, twists(){return st.lastJ?st.lastJ.arms.map(a=>a.tw):[]}, gerr(){return st.lastJ?st.lastJ.arms.map(a=>a.tt&&a.grip?Math.round(a.grip.distanceTo(a.tt)*1000):-1):[]}, sdel(){return st.lastJ?st.lastJ.arms.map(a=>Math.round((a.ds||0)*1000)):[]}, slow(b){st.slow=b; sync()}, setClock(c){st.clock=c}, forceP(v){st.fp=v}, collide(step){step=step||3; const vs=[], v=new T.Vector3(), acc=new T.Vector3(), t=new T.Vector3(), M=new T.Matrix4();
+  heat(m){st.heat=m||null; heatU.value=m?1:0}, resetView(){st.uy=0; st.up=0; st.user=0}, play(b){st.playing=b; sync()}, camO(c){st.camO=c}, grips(){return st.lastJ?st.lastJ.arms.map(a=>a.grip&&a.grip.toArray()):[]}, twists(){return st.lastJ?st.lastJ.arms.map(a=>a.tw):[]}, gerr(){return st.lastJ?st.lastJ.arms.map(a=>a.tt&&a.grip?Math.round(a.grip.distanceTo(a.tt)*1000):-1):[]}, sdel(){return st.lastJ?st.lastJ.arms.map(a=>Math.round((a.ds||0)*1000)):[]}, slow(b){st.slow=b; sync()}, setClock(c){st.clock=c}, forceP(v){st.fp=v}, collide(step){step=step||3; const vs=[], v=new T.Vector3(), acc=new T.Vector3(), t=new T.Vector3(), M=new T.Matrix4();
    SKM.forEach(m=>{const g=m.geometry, pos=g.attributes.position, si=g.attributes.skinIndex, sw=g.attributes.skinWeight, bones=m.skeleton.bones, inv=m.skeleton.boneInverses, n=pos.count;
      const BM=bones.map((bn,j)=>new T.Matrix4().multiplyMatrices(bn.matrixWorld,inv[j]));
      const gi=(a,i,k)=>k===0?a.getX(i):k===1?a.getY(i):k===2?a.getZ(i):a.getW(i);
