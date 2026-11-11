@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.11.11-2";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.11.11-4";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -249,7 +249,7 @@ body{background:var(--bg);min-height:100vh}
 .week button{position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;padding:9px 2px 10px;border-radius:18px;color:var(--fg-2)}
 .week .wd{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
 .week .dn{font-size:1.35rem;font-weight:800;color:var(--fg);line-height:1.2}
-.week .rn{font-size:.7rem;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.week .rn{font-size:.68rem;font-weight:600;max-width:100%;line-height:1.15;text-align:center;overflow-wrap:anywhere}
 .week .today .wd{color:var(--rojo)}
 .week button[aria-pressed="true"]{background:var(--azul);color:#C9D3EA}
 .week button[aria-pressed="true"] .dn{color:#fff}
@@ -309,11 +309,18 @@ let uidc = 0; const uid = p => (p||'x') + Date.now().toString(36) + (uidc++).toS
 
 const DEFAULT = {
   routines: {
-    espalda: {name:'Espalda · hombro · bíceps', color:'espalda', exercises:[
+    espalda: {name:'Espalda A · hombro · bíceps', color:'espalda', exercises:[
       {id:'dom',name:'Dominadas (agarre abierto)',type:'fuerza',sets:4,reps:'6-10',weight:0,rest:150},
       {id:'remov',name:'Remo sentado con V (polea)',type:'fuerza',sets:3,reps:'10-12',weight:45,rest:120},
       {id:'rdelt',name:'Rear delt fly (polea)',type:'fuerza',sets:3,reps:'15',weight:30,rest:75},
-      {id:'lat1',name:'Elevaciones laterales',type:'fuerza',sets:3,reps:'15',weight:10,rest:75},
+      {id:'latc',name:'Elevación lateral en polea (un brazo)',type:'fuerza',sets:4,reps:'12-15 c/brazo',weight:5,rest:45},
+      {id:'pred',name:'Curl predicador barra EZ',type:'fuerza',sets:3,reps:'10-12',weight:20,rest:90},
+      {id:'mart',name:'Curl martillo sentado',type:'fuerza',sets:3,reps:'10-12',weight:14,rest:90}
+    ]},
+    espalda2: {name:'Espalda B · bíceps', color:'espalda', exercises:[
+      {id:'dom',name:'Dominadas (agarre abierto)',type:'fuerza',sets:4,reps:'6-10',weight:0,rest:150},
+      {id:'remov',name:'Remo sentado con V (polea)',type:'fuerza',sets:3,reps:'10-12',weight:45,rest:120},
+      {id:'rdelt',name:'Rear delt fly (polea)',type:'fuerza',sets:3,reps:'15',weight:30,rest:75},
       {id:'pred',name:'Curl predicador barra EZ',type:'fuerza',sets:3,reps:'10-12',weight:20,rest:90},
       {id:'mart',name:'Curl martillo sentado',type:'fuerza',sets:3,reps:'10-12',weight:14,rest:90}
     ]},
@@ -323,7 +330,6 @@ const DEFAULT = {
       {id:'apert',name:'Aperturas en máquina',type:'fuerza',sets:3,reps:'10-12',weight:60,rest:90},
       {id:'fondos',name:'Fondos en paralelas',type:'fuerza',sets:3,reps:'8-12',weight:0,rest:120},
       {id:'push',name:'Pushdown con soga',type:'fuerza',sets:3,reps:'10-12',weight:30,rest:75},
-      {id:'lat2',name:'Elevaciones laterales',type:'fuerza',sets:3,reps:'15',weight:10,rest:75},
       {id:'remo',name:'Remo (máquina, cardio)',type:'cardio',sets:1,reps:'12',weight:0,rest:0}
     ]},
     pecho2: {name:'Pecho B · tríceps', color:'pecho', exercises:[
@@ -332,7 +338,7 @@ const DEFAULT = {
       {id:'apert',name:'Aperturas en máquina',type:'fuerza',sets:3,reps:'10-12',weight:60,rest:90},
       {id:'fondos',name:'Fondos en paralelas',type:'fuerza',sets:3,reps:'8-12',weight:0,rest:120},
       {id:'extoh',name:'Extensión de tríceps sobre la cabeza (polea)',type:'fuerza',sets:3,reps:'10-15',weight:20,rest:75},
-      {id:'lat2',name:'Elevaciones laterales',type:'fuerza',sets:3,reps:'15',weight:10,rest:75},
+      {id:'latc',name:'Elevación lateral en polea (un brazo)',type:'fuerza',sets:4,reps:'12-15 c/brazo',weight:5,rest:45},
       {id:'remo',name:'Remo (máquina, cardio)',type:'cardio',sets:1,reps:'12',weight:0,rest:0}
     ]},
     piernas: {name:'Piernas · glúteo', color:'piernas', exercises:[
@@ -355,8 +361,8 @@ const DEFAULT = {
       {id:'crunch',name:'Crunch en polea',type:'fuerza',sets:3,reps:'12-15',weight:0,rest:60}
     ]}
   },
-  planVersion: 5,
-  schedule: {1:'espalda',2:'pecho',3:'piernas',4:'espalda',5:'pecho2',6:'piernas2'}
+  planVersion: 6,
+  schedule: {1:'espalda',2:'pecho',3:'piernas',4:'espalda2',5:'pecho2',6:'piernas2'}
 };
 
 const S = {tab:'hoy', plan:null, sessions:[], pick:null, workout:null, timer:null, editKey:'espalda', editDraft:null, progEx:null, store:null, confirmDel:null, openSess:null, confirmFinish:false};
@@ -514,6 +520,7 @@ const FIG = {
   squat:{s:['20,58 44,58'],a:[['30,13 30,32','26,27 21,41'],['30,32 31,44 30,57','21,41 36,43 30,57'],['30,16 39,25','26,29 40,31']],ac:[[30,8,26,22,4.5]]},
   calf:{s:['22,58 42,58'],g:'0 0;0 -5;0 0',m:['31,15 31,36','31,36 29,55','31,36 34,55','31,18 31,33'],mc:[[31,9,4.5]]},
   thrust:{s:['4,40 18,40','44,57 54,57'],c:[[9,33,4.5]],a:[['15,37 32,50 45,42 47,57','15,37 32,37 45,37 47,57']],ac:[[32,50,32,37,3.4]]},
+  raisec:{s:['32,15 32,36','32,36 27,57','32,36 37,57','28,18 20,30','56,4 56,58'],c:[[32,9,4.5]],a:[['36,18 34,34','36,18 52,18'],['56,54 34,34','56,54 52,18']]},
   legraise:{s:['10,6 54,6','26,6 29,20','38,6 35,20','32,20 32,36'],c:[[32,15,4]],a:[['32,36 31,47 31,58','32,36 44,38 55,37']]},
   crunch:{s:['6,4 6,58','30,56 50,57','30,56 32,38'],a:[['32,38 30,20','32,38 17,40'],['6,8 29,19','6,8 16,37']],ac:[[29,13,12,44,4.5]]},
   ohext:{s:['56,3 56,58','28,38 20,57','28,38 38,57','28,38 22,20','22,21 16,10'],c:[[19,14,4.3]],a:[['16,10 25,17','16,10 11,1'],['56,20 25,17','56,20 11,1']]},
@@ -537,7 +544,7 @@ const FIG = {
 function patternOf(ex){
   const n=(ex.name||'').toLowerCase();
   if(ex.type==='cardio') return 'rower';
-  const R=[[/sobre la cabeza|overhead|tras nuca/,'ohext'],[/crunch/,'crunch'],[/elevaci[oó]n(es)? de piernas|colgad/,'legraise'],[/(gemelo|pantorr|calf).*prensa|prensa.*(gemelo|pantorr)/,'calfpress'],[/gemelo|pantorr|calf/,'calf'],[/cu[aá]driceps|extensi[oó]n de pierna/,'ext'],[/femoral|isquio/,'legcurl'],[/skull|franc[eé]s|rompecr/,'skull'],[/fondo|dips/,'dips'],[/pushdown|tr[ií]ceps|soga/,'tri'],[/dominad|jal[oó]n|pulldown/,'pull'],[/rear delt|face pull|p[aá]jaro|deltoide post/,'rdelt'],[/remo/,'row'],[/abduc/,'abd'],[/aduc/,'add'],[/hip ?thrust|puente de gl/,'thrust'],[/hiperext|lumbar|rumano|peso muerto/,'hinge'],[/hack/,'hack'],[/prensa/,'legpress'],[/sentadilla|squat|zancada/,'squat'],[/predicador|scott/,'preacher'],[/martillo|hammer/,'hammer'],[/curl|b[ií]ceps/,'curl'],[/lateral|elevaci|militar/,'raise'],[/inclinad/,'incline'],[/apertura|pec ?deck|fly|cruce/,'fly'],[/press|banca|pecho/,'press']];
+  const R=[[/sobre la cabeza|overhead|tras nuca/,'ohext'],[/crunch/,'crunch'],[/elevaci[oó]n(es)? de piernas|colgad/,'legraise'],[/(gemelo|pantorr|calf).*prensa|prensa.*(gemelo|pantorr)/,'calfpress'],[/gemelo|pantorr|calf/,'calf'],[/cu[aá]driceps|extensi[oó]n de pierna/,'ext'],[/femoral|isquio/,'legcurl'],[/skull|franc[eé]s|rompecr/,'skull'],[/fondo|dips/,'dips'],[/pushdown|tr[ií]ceps|soga/,'tri'],[/dominad|jal[oó]n|pulldown/,'pull'],[/rear delt|face pull|p[aá]jaro|deltoide post/,'rdelt'],[/remo/,'row'],[/abduc/,'abd'],[/aduc/,'add'],[/hip ?thrust|puente de gl/,'thrust'],[/hiperext|lumbar|rumano|peso muerto/,'hinge'],[/hack/,'hack'],[/prensa/,'legpress'],[/sentadilla|squat|zancada/,'squat'],[/predicador|scott/,'preacher'],[/martillo|hammer/,'hammer'],[/curl|b[ií]ceps/,'curl'],[/lateral.*polea|polea.*lateral/,'raisec'],[/lateral|elevaci|militar/,'raise'],[/inclinad/,'incline'],[/apertura|pec ?deck|fly|cruce/,'fly'],[/press|banca|pecho/,'press']];
   for(const [re,p] of R) if(re.test(n)) return p;
   return 'curl';
 }
@@ -915,6 +922,16 @@ document.addEventListener('change',async ev=>{
           if(i>=0){ const w=+p2.exercises[i].weight||0; if(w) oh.weight=Math.round(w*.7/2.5)*2.5; p2.exercises.splice(i,1,oh) } else p2.exercises.push(oh);
           R_.pecho2=p2; if(R_.pecho.name==='Pecho · tríceps') R_.pecho.name='Pecho A · tríceps'; S.plan.schedule=Object.assign({},S.plan.schedule,{5:'pecho2'}) }
         msg='Rutina actualizada: abdominales, isquios, gemelos y tríceps sobre la cabeza';
+      }
+      if(v<6){ // laterales: fuera de martes y jueves (días de 1 hora); lunes y viernes en polea de a un brazo, 4 series
+        const R_=S.plan.routines, cp=o=>JSON.parse(JSON.stringify(o)), LC=cp(DEFAULT.routines.espalda.exercises.find(e=>e.id==='latc'));
+        const isLat=e=>/elevaci[oó]n(es)? lateral/i.test(e.name)&&e.id!=='latc';
+        const swap=r=>{ if(!r||r.exercises.some(e=>e.id==='latc')) return; const i=r.exercises.findIndex(isLat); i>=0?r.exercises.splice(i,1,cp(LC)):r.exercises.push(cp(LC)) };
+        const drop=r=>{ if(r) r.exercises=r.exercises.filter(e=>!isLat(e)) };
+        if(R_.espalda && !R_.espalda2){ const e2=cp(R_.espalda); e2.name='Espalda B · bíceps'; drop(e2); R_.espalda2=e2; swap(R_.espalda);
+          if(R_.espalda.name==='Espalda · hombro · bíceps') R_.espalda.name='Espalda A · hombro · bíceps'; S.plan.schedule=Object.assign({},S.plan.schedule,{4:'espalda2'}) }
+        drop(R_.pecho); swap(R_.pecho2);
+        msg='Laterales: lunes y viernes en polea; martes y jueves sin laterales';
       }
       if(v<DEFAULT.planVersion){ S.plan.planVersion=DEFAULT.planVersion; try{await S.store.savePlan(S.plan); if(msg) setTimeout(()=>toast(msg),400)}catch(e){} }
     }

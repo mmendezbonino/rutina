@@ -17,6 +17,9 @@ const META=[
  {id:'rdelt',name:'Rear delt fly en máquina',main:['Deltoide posterior'],sec:['Romboides','Trapecio medio'],lab:['Abrí','Volvé controlado'],work:{deltR:1,rhomb:.6,traps:.25},
   cam:{yaw:205,pitch:16,dist:3.1,ty:.86,tz:.1},cue:'Sentado mirando a la máquina, con el pecho apoyado en el pad.',
   steps:['Agarrá las manijas con los brazos al frente y los codos apenas flexionados.','Abrí los brazos en arco hasta la línea de los hombros, juntando los omóplatos.','Volvé despacio, sin dejar que el peso choque.']},
+ {id:'latcable',name:'Elevación lateral en polea (un brazo)',main:['Deltoide lateral'],sec:['Trapecio (que no suba)'],lab:['Subí','Bajá controlado'],work:{deltS:1,deltF:.25,traps:.12},
+  cam:{yaw:-28,pitch:8,dist:3.9,ty:1,tz:0},cue:'De costado a la polea baja, el brazo que trabaja es el más lejano y el cable pasa por delante del cuerpo.',
+  steps:['Agarrá la manija con la mano más lejana a la polea y sostenete de la máquina con la otra.','Subí el brazo hacia el costado hasta la altura del hombro, con el codo apenas flexionado.','Bajá en 2–3 segundos hasta que la mano cruce un poco por delante de la cadera, y cambiá de brazo.']},
  {id:'lat',name:'Elevaciones laterales',main:['Deltoide lateral'],sec:['Trapecio (que no suba)'],lab:['Subí','Bajá controlado'],work:{deltS:1,deltF:.35,traps:.12},
   cam:{yaw:22,pitch:8,dist:3.9,ty:.98,tz:0},cue:'De pie, mancuernas a los costados, rodillas apenas flexionadas.',
   steps:['Codos apenas flexionados, guiando el movimiento con el codo.','Subí hasta la altura de los hombros, con los brazos un poco adelante del cuerpo.','Bajá en 2–3 segundos sin balancear el torso ni encoger el cuello.']},
@@ -91,8 +94,8 @@ const META=[
 A3.list=META;
 A3.meta=id=>META.find(m=>m.id===id)||null;
 // ids de la app → animación; si no hay, se busca por nombre
-const BY_APP={fondos:'dips',dom:'pull',remov:'row',rdelt:'rdelt',lat1:'lat',lat2:'lat',pred:'preacher',mart:'hammer',banca:'bench',incl:'incline',apert:'fly',skull:'skull',push:'pushdown',remo:'rower',hack:'hack',prensa:'press',gem:'calfpress',hiper:'hyper',hiperlat:'hyperlat',hipt:'thrust',hiptL:'thrust',femsen:'legcurl',femL:'legcurl',gemL:'calfpress',prensag:'press',ext:'legext',abdm:'abd',addm:'add',elevp:'legraise',crunch:'cablecrunch',extoh:'ohext'};
-const BY_NAME=[[/sobre la cabeza|overhead|tras nuca/,'ohext'],[/crunch|encogimiento abdominal/,'cablecrunch'],[/elevaci[oó]n(es)? de piernas|leg raise|rodillas al pecho/,'legraise'],[/(gemelo|pantorr|calf).*prensa|prensa.*(gemelo|pantorr)/,'calfpress'],[/cu[aá]driceps|extensi[oó]n de pierna/,'legext'],[/femoral|isquio/,'legcurl'],[/skull|franc[eé]s|rompecr/,'skull'],[/fondo|dips|paralelas/,'dips'],[/pushdown|soga|tr[ií]ceps en polea/,'pushdown'],[/dominad|jal[oó]n|pulldown/,'pull'],[/rear delt|p[aá]jaro|deltoide post|face pull/,'rdelt'],[/remo.*(m[aá]quina.*cardio|cardio|ergo)/,'rower'],[/remo/,'row'],[/abduc/,'abd'],[/aduc/,'add'],[/hiperext.*lateral|lateral.*hiperext/,'hyperlat'],[/hip ?thrust|puente de gl/,'thrust'],[/hiperext|lumbar/,'hyper'],[/hack/,'hack'],[/prensa/,'press'],[/predicador|scott/,'preacher'],[/martillo|hammer/,'hammer'],[/lateral|elevaci/,'lat'],[/inclinad/,'incline'],[/apertura|pec ?deck|cruce/,'fly'],[/press.*banca|banca|bench/,'bench']];
+const BY_APP={fondos:'dips',dom:'pull',remov:'row',rdelt:'rdelt',lat1:'lat',lat2:'lat',latc:'latcable',pred:'preacher',mart:'hammer',banca:'bench',incl:'incline',apert:'fly',skull:'skull',push:'pushdown',remo:'rower',hack:'hack',prensa:'press',gem:'calfpress',hiper:'hyper',hiperlat:'hyperlat',hipt:'thrust',hiptL:'thrust',femsen:'legcurl',femL:'legcurl',gemL:'calfpress',prensag:'press',ext:'legext',abdm:'abd',addm:'add',elevp:'legraise',crunch:'cablecrunch',extoh:'ohext'};
+const BY_NAME=[[/lateral.*polea|polea.*lateral/,'latcable'],[/sobre la cabeza|overhead|tras nuca/,'ohext'],[/crunch|encogimiento abdominal/,'cablecrunch'],[/elevaci[oó]n(es)? de piernas|leg raise|rodillas al pecho/,'legraise'],[/(gemelo|pantorr|calf).*prensa|prensa.*(gemelo|pantorr)/,'calfpress'],[/cu[aá]driceps|extensi[oó]n de pierna/,'legext'],[/femoral|isquio/,'legcurl'],[/skull|franc[eé]s|rompecr/,'skull'],[/fondo|dips|paralelas/,'dips'],[/pushdown|soga|tr[ií]ceps en polea/,'pushdown'],[/dominad|jal[oó]n|pulldown/,'pull'],[/rear delt|p[aá]jaro|deltoide post|face pull/,'rdelt'],[/remo.*(m[aá]quina.*cardio|cardio|ergo)/,'rower'],[/remo/,'row'],[/abduc/,'abd'],[/aduc/,'add'],[/hiperext.*lateral|lateral.*hiperext/,'hyperlat'],[/hip ?thrust|puente de gl/,'thrust'],[/hiperext|lumbar/,'hyper'],[/hack/,'hack'],[/prensa/,'press'],[/predicador|scott/,'preacher'],[/martillo|hammer/,'hammer'],[/lateral|elevaci/,'lat'],[/inclinad/,'incline'],[/apertura|pec ?deck|cruce/,'fly'],[/press.*banca|banca|bench/,'bench']];
 A3.match=ex=>{
   if(!ex) return null;
   if(ex.type==='cardio' && /remo/i.test(ex.name||'')) return 'rower';
@@ -207,7 +210,7 @@ const rel=v=>{const d=v.clone().sub(P0); return {l:d.dot(L0),u:d.dot(U0),f:d.dot
 DIM.sh=rel(sL0); DIM.hip=rel(J0.hL); DIM.neck=rel(nk0);
 LEN.ua=sL0.distanceTo(J0.eL); LEN.fa=J0.eL.distanceTo(wp(BN.hand_l)); LEN.th=J0.hL.distanceTo(J0.kL); LEN.sh=J0.kL.distanceTo(J0.aL); LEN.go=.1; LEN.R=LEN.ua+LEN.fa+LEN.go; // alcance hombro→centro del puño
 const CURL=[];
-const GRIP={pull:'pro',row:'neu',rdelt:'neu',lat:'dbz',preacher:'ez',hammer:'neu',bench:'pro',incline:'proL',fly:'neu',skull:'pro',dips:'dbz',pushdown:'neu',rower:'pro',hack:'neu',press:'neu',calfpress:'neu',legcurl:'neu',legext:'neu',thrust:'pro',legraise:'pro',cablecrunch:'neu',ohext:'neu',abd:'neu',add:'neu'};
+const GRIP={pull:'pro',row:'neu',rdelt:'neu',lat:'dbz',preacher:'ez',hammer:'neu',bench:'pro',incline:'proL',fly:'neu',skull:'pro',dips:'dbz',pushdown:'neu',rower:'pro',hack:'neu',press:'neu',calfpress:'neu',legcurl:'neu',legext:'neu',thrust:'pro',latcable:'neu',legraise:'pro',cablecrunch:'neu',ohext:'neu',abd:'neu',add:'neu'};
 const cl1=x=>Math.max(-1,Math.min(1,x));
 function twistA(bone,axis,ang){const q=new T.Quaternion().setFromAxisAngle(axis,ang); bone.quaternion.copy(wq(bone.parent).invert().multiply(q.multiply(wq(bone)))); bone.updateWorldMatrix(false,true)}
 function twist(bone,axis,from,to){const a=perp(from,axis), b=perp(to,axis); let ang=Math.acos(cl1(a.dot(b))); if(new T.Vector3().crossVectors(a,b).dot(axis)<0) ang=-ang;
@@ -434,6 +437,17 @@ stand:{
  pose(p){const f=frame(V(0,.958,0),Y,V(0,0,1));
    const arms=[1,-1].map(s=>arm(f,s,at(f.sh(s),V(s*.28,-1,.05).normalize(),.93*LEN.R),V(s*.2,.1,-1)));
    return {f,arms,legs:standLegs(f),grip:.35}}},
+latcable:{
+ // polea baja a la izquierda (+x); trabaja el brazo derecho, el cable cruza por delante; la mano izquierda se sostiene de la columna
+ pul:V(.6,.14,.24),
+ build(){B.stack('stk',V(.86,0,0),Math.PI/2,2.12,.34); B.box([.12,2.0,.1],V(.66,1.0,.04),'mach'); B.box([.06,.06,.22],V(.6,.14,.14),'mach'); B.cyl(V(.57,.14,.24),V(.63,.14,.24),.045,'metal');
+   B.box([.16,.04,.04],V(.6,1.12,.08),'mach'); B.cyl(V(.53,1.02,.12),V(.53,1.22,.12),.018,'pad');
+   B.dyn('cable',()=>B.mkCyl(.007,'metal')); B.dyn('hd',()=>B.mkCyl(.016,'metal'))},
+ pose(p){const f=frame(V(0,.958,0),Y,V(0,0,1)), th=rad(lerp(-12,86,p)), sc=rad(18);
+   const d=V(-Math.sin(th)*Math.cos(sc),-Math.cos(th),Math.sin(th)*Math.sin(sc)+lerp(.4,.18,p)).normalize();
+   const arms=[arm(f,1,V(.53,1.12,.12),V(.4,-.8,-.4)),arm(f,-1,at(f.sh(-1),d,.975*LEN.R),V(0,.25,-1))];
+   return {f,arms,legs:standLegs(f)}},
+ dyn(J,D){const g=B.grip(J.arms[1]), ax=J.arms[1].kax||V(0,0,1); B.seg(D.hd,at(g,ax,-.06),at(g,ax,.06)); B.seg(D.cable,P.latcable.pul,g)}},
 lat:{
  build(){dumbbells(['aL','bL','hL','aR','bR','hR'])},
  pose(p){const f=frame(V(0,.958,0),Y,V(0,0,1)), th=rad(lerp(8,86,p)), sc=rad(15);
@@ -662,6 +676,7 @@ const LIFE={
  row:{follow:1,tempo:[1,.6,2,.35],life:p=>({scap:{e:lerp(2,-2,p),p:lerp(8,-12,p)},sp:{f:lerp(8,-3,p)},stab:.7,sway:.2})},
  rdelt:{follow:1,tempo:[1,.45,2.1,.3],life:p=>({scap:{e:lerp(0,2,p),p:lerp(3,-14,p)},sp:{f:lerp(2,-3,p)},head:{p:-4},stab:.5,sway:.15})},
  stand:{tempo:[1,1,1,1],life:()=>({sway:0})},
+ latcable:{tempo:[1,.3,2.2,.35],life:p=>({scap:{e:lerp(0,5,p),p:lerp(0,3,p)},sp:{f:2,l:-3},stab:.8,sway:.6})},
  lat:{follow:1,tempo:[1,.3,2.2,.35],life:p=>({scap:{e:lerp(0,5,p),p:lerp(0,3,p)},sp:{f:lerp(2,5,p)},stab:.8,sway:1})},
  preacher:{tempo:[1.1,.4,2.4,.25],life:p=>({scap:{e:lerp(0,2,p),p:6},sp:{f:3},head:{p:lerp(4,-22,p)},stab:.2,sway:.15})},
  hammer:{tempo:[1,.3,2.2,.3],life:p=>({scap:{e:lerp(0,2,p)},sp:{f:lerp(0,2,p)},stab:.8,sway:.3})},
