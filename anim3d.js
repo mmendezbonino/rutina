@@ -502,7 +502,7 @@ incline:{
  ax(){const a=rad(30); return [V(0,Math.sin(a),-Math.cos(a)),V(0,Math.cos(a),Math.sin(a))]}, // respaldo a 30°
  pose(p){const [U,F]=P.incline.ax(), f=frame(at(V(0,.598,.05),F,-.005),U,F);
    const arms=[1,-1].map(s=>{const sh=f.sh(s), ed=V(s*.72,-.32,.55).normalize(), E=at(sh,ed,LEN.ua), bot=at(E,Y,LEN.fa+LEN.go),
-       top=at(sh,at(V(0,0,0),f.F,.95,f.U,.12,f.L,-s*.08).normalize(),.99*LEN.R);
+       top=at(sh,at(V(0,0,0),Y,.7,f.F,.4,f.L,-s*.04).normalize(),.99*LEN.R); // arriba: mancuernas sobre la parte alta del pecho, no sobre la cara
      return arm(f,s,mid(bot,top,p),at(ed,f.F,-.2))});
    return {f,arms,legs:[1,-1].map(s=>leg(f,s,V(s*.21,.098,.53),V(s*.15,1,.25)))}},
  dyn(J,D){J.arms.forEach((a,i)=>placeDumbbell(D,i?'R':'L',B.grip(a),a.kax||J.f.L))}},
