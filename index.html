@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.11.11-8";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.11.12-1";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -328,8 +328,8 @@ const DEFAULT = {
     pecho: {name:'Pecho A · tríceps', color:'pecho', exercises:[
       {id:'banca',name:'Press banca con barra',type:'fuerza',sets:4,reps:'8-11',weight:60,rest:150},
       {id:'incl',name:'Press inclinado mancuernas',type:'fuerza',sets:3,reps:'10-12',weight:20,rest:120},
-      {id:'apert',name:'Aperturas en máquina',type:'fuerza',sets:3,reps:'10-12',weight:60,rest:90},
       {id:'fondos',name:'Fondos en paralelas',type:'fuerza',sets:3,reps:'8-12',weight:0,rest:120},
+      {id:'apert',name:'Aperturas en máquina',type:'fuerza',sets:3,reps:'10-12',weight:60,rest:90},
       {id:'push',name:'Pushdown con soga',type:'fuerza',sets:3,reps:'10-12',weight:30,rest:75},
       {id:'lats',name:'Elevaciones laterales sentado',type:'fuerza',sets:3,reps:'12-15',weight:10,rest:60},
       {id:'remo',name:'Remo (máquina, cardio)',type:'cardio',sets:1,reps:'12',weight:0,rest:0}
@@ -337,8 +337,8 @@ const DEFAULT = {
     pecho2: {name:'Pecho B · tríceps', color:'pecho', exercises:[
       {id:'banca',name:'Press banca con barra',type:'fuerza',sets:4,reps:'8-11',weight:60,rest:150},
       {id:'incl',name:'Press inclinado mancuernas',type:'fuerza',sets:3,reps:'10-12',weight:20,rest:120},
-      {id:'apert',name:'Aperturas en máquina',type:'fuerza',sets:3,reps:'10-12',weight:60,rest:90},
       {id:'fondos',name:'Fondos en paralelas',type:'fuerza',sets:3,reps:'8-12',weight:0,rest:120},
+      {id:'apert',name:'Aperturas en máquina',type:'fuerza',sets:3,reps:'10-12',weight:60,rest:90},
       {id:'extoh',name:'Extensión de tríceps sobre la cabeza (polea)',type:'fuerza',sets:3,reps:'10-15',weight:20,rest:75},
       {id:'latc',name:'Elevación lateral en polea (un brazo)',type:'fuerza',sets:3,reps:'12-15 c/brazo',weight:5,rest:45},
       {id:'remo',name:'Remo (máquina, cardio)',type:'cardio',sets:1,reps:'12',weight:0,rest:0}
@@ -356,14 +356,14 @@ const DEFAULT = {
     ]},
     piernas2: {name:'Piernas · pesado', color:'piernas', exercises:[
       {id:'hack',name:'Hack squat',type:'fuerza',sets:3,reps:'6-10',weight:0,rest:150},
-      {id:'femsen',name:'Curl femoral sentado',type:'fuerza',sets:3,reps:'8-12',weight:45,rest:90},
       {id:'hipt',name:'Hip thrust en máquina',type:'fuerza',sets:3,reps:'8-10',weight:0,rest:120},
+      {id:'femsen',name:'Curl femoral sentado',type:'fuerza',sets:3,reps:'8-12',weight:45,rest:90},
       {id:'ext',name:'Extensión de cuádriceps',type:'fuerza',sets:3,reps:'12-15',weight:68,rest:75},
       {id:'gem',name:'Gemelo en prensa',type:'fuerza',sets:3,reps:'10-12',weight:0,rest:60},
       {id:'crunch',name:'Crunch en polea',type:'fuerza',sets:3,reps:'12-15',weight:0,rest:60}
     ]}
   },
-  planVersion: 7,
+  planVersion: 8,
   schedule: {1:'espalda',2:'pecho',3:'piernas',4:'espalda2',5:'pecho2',6:'piernas2'}
 };
 
@@ -944,6 +944,11 @@ document.addEventListener('change',async ev=>{
         put(R_.pecho,'remo'); put(R_.espalda2,'pred');
         [R_.espalda,R_.pecho2].forEach(r=>{ if(r) r.exercises.forEach(e=>{ if(e.id==='latc'&&e.sets===4) e.sets=3 }) });
         msg='Laterales: sentado martes y jueves, en polea lunes y viernes';
+      }
+      if(v<8){ // orden: fondos antes de aperturas; hip thrust antes del curl femoral el sábado
+        const R_=S.plan.routines, mv=(r,id,beforeId)=>{ if(!r) return; const ex=r.exercises, i=ex.findIndex(e=>e.id===id), j=ex.findIndex(e=>e.id===beforeId); if(i<0||j<0||i<j) return; const [x]=ex.splice(i,1); ex.splice(j,0,x) };
+        mv(R_.pecho,'fondos','apert'); mv(R_.pecho2,'fondos','apert'); mv(R_.piernas2,'hipt','femsen');
+        msg='Orden: fondos antes de aperturas y hip thrust antes del curl femoral';
       }
       if(v<DEFAULT.planVersion){ S.plan.planVersion=DEFAULT.planVersion; try{await S.store.savePlan(S.plan); if(msg) setTimeout(()=>toast(msg),400)}catch(e){} }
     }
