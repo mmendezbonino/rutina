@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.11.12-1";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.11.12-2";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -260,6 +260,18 @@ body{background:var(--bg);min-height:100vh}
 .week .ok{position:absolute;top:7px;right:7px;width:7px;height:7px;border-radius:50%;background:var(--rojo)}
 .pick{gap:10px;background:var(--bg);box-shadow:none;padding:4px 0}
 .pick>.row{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow)}
+/* calentamiento */
+.warm{background:var(--surface);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+.warm summary{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;font-weight:700;cursor:pointer;list-style:none;min-height:48px}
+.warm summary::-webkit-details-marker{display:none}
+.warm summary::before{content:"";width:8px;height:8px;border-right:2px solid var(--azul);border-bottom:2px solid var(--azul);transform:rotate(-45deg);transition:transform .15s;flex:none}
+.warm[open] summary::before{transform:rotate(45deg)}
+.warm summary span:first-of-type{flex:1}
+.warm .wu-t{font-size:.8rem;font-weight:600;color:var(--fg-2)}
+.warm .wu-b{padding:0 16px 14px}
+.warm .wu-h{margin:10px 0 4px;font-size:.78rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--azul)}
+.warm ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:3px;font-size:.92rem}
+textarea{width:100%;font:inherit;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface);color:var(--fg);resize:vertical}
 /* barra inferior */
 nav.tabs{background:#fff;border-top:1px solid var(--line);backdrop-filter:none;-webkit-backdrop-filter:none}
 nav.tabs button{color:var(--fg-2);border-top:3px solid transparent;font-size:.75rem}
@@ -363,7 +375,13 @@ const DEFAULT = {
       {id:'crunch',name:'Crunch en polea',type:'fuerza',sets:3,reps:'12-15',weight:0,rest:60}
     ]}
   },
-  planVersion: 8,
+  planVersion: 9,
+  warmups: {
+    espalda: 'General (4 min):\n2 min de remo o bici suave\nDislocaciones con banda o palo: 10\nFace pull liviano: 15\nColgado de la barra: 2 × 20 s (relajado y después hombros abajo)\nAproximación en dominadas:\n1 × 5 con más asistencia que la de trabajo\n1 × 3 con la asistencia de trabajo',
+    pecho: 'General (4 min):\n2 min de remo suave\nRotación externa de hombro con banda o polea: 15 por brazo\nFlexiones lentas: 10\nAproximación en press banca:\nBarra sola × 10\n50 % del peso × 6\n75 % × 3',
+    piernas: 'General (5 min):\n3 min de bici o caminadora con inclinación\nPuente de glúteo en el piso: 15\nSentadilla sin peso: 10\nBalanceo de pierna adelante-atrás y de costado: 10 por pierna\nAproximación en hip thrust:\n1 × 10 con la mitad del peso',
+    piernas2: 'General (5 min):\n3 min de bici o caminadora con inclinación\nPuente de glúteo en el piso: 15\nSentadilla sin peso: 10\nZancadas caminando: 10\nBalanceo de pierna: 10 por pierna\nAproximación en hack squat:\nSin peso × 10\n40 % × 8\n60 % × 5\n80 % × 2–3\nHip thrust: 1 × 8 liviana antes de empezar'
+  },
   schedule: {1:'espalda',2:'pecho',3:'piernas',4:'espalda2',5:'pecho2',6:'piernas2'}
 };
 
@@ -569,6 +587,9 @@ const ytLink = name => 'https://www.youtube.com/results?search_query='+encodeURI
 const IC_PLAY='<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>';
 
 // ---------- views ----------
+function warmHTML(r,open){ if(!r||!r.warmup) return ''; const ls=String(r.warmup).split('\n').map(x=>x.trim()).filter(Boolean);
+  let h='', ul=false; ls.forEach(l=>{ if(/:$/.test(l)){ if(ul){h+='</ul>';ul=false} h+=`<p class="wu-h">${esc(l.slice(0,-1))}</p>` } else { if(!ul){h+='<ul>';ul=true} h+=`<li>${esc(l)}</li>` } }); if(ul) h+='</ul>';
+  return `<details class="warm"${open?' open':''}><summary><span>Calentamiento</span><span class="wu-t">${ls.filter(l=>!/:$/.test(l)).length} pasos</span></summary><div class="wu-b">${h}</div></details>` }
 function viewHoy(){
   if(S.workout) return viewWorkout();
   const now=new Date(), dow=now.getDay();
@@ -590,6 +611,7 @@ function viewHoy(){
   { const pb=notifProblem(nativeStatus()); if(pb) h+=`<button class="confirm" style="text-align:left;border:1.5px solid var(--rojo);background:var(--rojo-soft)" data-act="tab-rut"><span style="flex:1"><b style="color:var(--rojo)">${pb}.</b> El descanso no te va a avisar con la pantalla apagada. Tocá para arreglarlo.</span></button>` }
   if(!key) return h+`<div class="empty">Hoy no tenés rutina programada.<br>Elegí una arriba si querés entrenar igual.</div>`+cloudNote();
   const r=S.plan.routines[key], c=colorOf(key);
+  h+=warmHTML(r,false);
   h+=`<div class="group">`+r.exercises.map((ex,i)=>{
     const last=lastFor(ex.id);
     let sub = ex.type==='cardio' ? `Cardio · ${esc(ex.reps)} min` : `${ex.sets} × ${esc(ex.reps)}${ex.weight?` · ${fmtKg(ex.weight)} kg`:''}`;
@@ -623,6 +645,7 @@ function viewWorkout(){
   if(S.confirmFinish){
     h+=`<div class="confirm"><span style="flex:1;min-width:180px">¿Guardar el entrenamiento? Se guardan las series marcadas.</span><button class="btn sm primary" data-act="finish2">Guardar</button><button class="btn sm" data-act="finishno">Seguir</button><button class="btn sm danger" data-act="discard">Descartar</button></div>`;
   }
+  { const any=w.entries.some(e=>e.type==='cardio'?+e.cardio.min>0:e.sets.some(x=>x.done)); h+=warmHTML(r,!any) }
   h+=w.entries.map((e,ei)=>{
     const ex=r.exercises.find(x=>x.id===e.exId)||{reps:'',rest:90};
     const last=lastFor(e.exId);
@@ -721,6 +744,7 @@ function viewRut(){
   h+=`<div class="week rsel" role="group" aria-label="Elegir rutina">${keys.map(k=>{const r=S.plan.routines[k]; const days=[1,2,3,4,5,6,0].filter(d=>S.plan.schedule[d]===k).map(d=>DAYNAMES[d].slice(0,3)).join(' · ');
     return `<button data-act="ekey" data-k="${k}" aria-pressed="${k===S.editKey}"><span class="wd">${days||'Sin día'}</span><span class="dn">${esc(shortName(k))}</span><span class="rn">${r.exercises.length} ejercicio${r.exercises.length===1?'':'s'}</span></button>`}).join('')}</div>`;
   h+=`<div class="field"><label for="rname">Nombre de la rutina</label><input id="rname" data-ef="rname" value="${esc(d.name)}"></div>`;
+  h+=`<div class="field"><label for="rwarm">Calentamiento (un paso por línea; terminá una línea en «:» para hacerla título)</label><textarea id="rwarm" data-ef="warmup" rows="7">${esc(d.warmup||'')}</textarea></div>`;
   h+=`<section class="section"><div class="section-h"><h2>Ejercicios</h2><span>${d.exercises.length}</span></div>`+d.exercises.map((e,i)=>`<div class="ed">
     <div class="ed-h"><input id="en-${i}" aria-label="Nombre del ejercicio ${i+1}" data-ef="name" data-i="${i}" value="${esc(e.name)}">
       <button class="icon-btn" aria-label="Subir" data-act="up" data-i="${i}" ${i===0?'disabled':''}>${IC.up}</button>
@@ -877,6 +901,7 @@ document.addEventListener('input',ev=>{
   else if(t.dataset.ef&&S.editDraft){
     const f=t.dataset.ef;
     if(f==='rname'){S.editDraft.name=t.value;return}
+    if(f==='warmup'){S.editDraft.warmup=t.value;return}
     const e=S.editDraft.exercises[+t.dataset.i];
     if(f==='sets'||f==='rest') e[f]=Math.max(0,parseInt(t.value)||0);
     else if(f==='weight') e[f]=parseFloat(String(t.value).replace(',','.'))||0;
@@ -949,6 +974,11 @@ document.addEventListener('change',async ev=>{
         const R_=S.plan.routines, mv=(r,id,beforeId)=>{ if(!r) return; const ex=r.exercises, i=ex.findIndex(e=>e.id===id), j=ex.findIndex(e=>e.id===beforeId); if(i<0||j<0||i<j) return; const [x]=ex.splice(i,1); ex.splice(j,0,x) };
         mv(R_.pecho,'fondos','apert'); mv(R_.pecho2,'fondos','apert'); mv(R_.piernas2,'hipt','femsen');
         msg='Orden: fondos antes de aperturas y hip thrust antes del curl femoral';
+      }
+      if(v<9){ // calentamiento como nota de cada rutina
+        const WU=DEFAULT.warmups, map={espalda:'espalda',espalda2:'espalda',pecho:'pecho',pecho2:'pecho',piernas:'piernas',piernas2:'piernas2'};
+        Object.entries(S.plan.routines).forEach(([k,r])=>{ if(!r.warmup&&map[k]) r.warmup=WU[map[k]] });
+        msg='Agregué el calentamiento de cada día';
       }
       if(v<DEFAULT.planVersion){ S.plan.planVersion=DEFAULT.planVersion; try{await S.store.savePlan(S.plan); if(msg) setTimeout(()=>toast(msg),400)}catch(e){} }
     }
