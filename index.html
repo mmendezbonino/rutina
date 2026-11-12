@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.11.12-2";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.11.12-4";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -363,19 +363,19 @@ const DEFAULT = {
       {id:'hiperlat',name:'Hiperextensiones laterales (por lado)',type:'fuerza',sets:3,reps:'12-15',weight:0,rest:60},
       {id:'abdm',name:'Abductores en máquina',type:'fuerza',sets:2,reps:'15',weight:0,rest:60},
       {id:'addm',name:'Aductores en máquina',type:'fuerza',sets:2,reps:'15',weight:0,rest:60},
-      {id:'gemL',name:'Gemelo en prensa',type:'fuerza',sets:3,reps:'15-20',weight:0,rest:60},
+      {id:'gemL',name:'Gemelo en prensa',type:'fuerza',sets:4,reps:'15-20',weight:0,rest:60},
       {id:'elevp',name:'Elevaciones de piernas colgado',type:'fuerza',sets:3,reps:'10-15',weight:0,rest:75}
     ]},
     piernas2: {name:'Piernas · pesado', color:'piernas', exercises:[
-      {id:'hack',name:'Hack squat',type:'fuerza',sets:3,reps:'6-10',weight:0,rest:150},
+      {id:'hack',name:'Hack squat',type:'fuerza',sets:4,reps:'6-10',weight:0,rest:150},
       {id:'hipt',name:'Hip thrust en máquina',type:'fuerza',sets:3,reps:'8-10',weight:0,rest:120},
-      {id:'femsen',name:'Curl femoral sentado',type:'fuerza',sets:3,reps:'8-12',weight:45,rest:90},
+      {id:'femsen',name:'Curl femoral sentado',type:'fuerza',sets:4,reps:'8-12',weight:45,rest:90},
       {id:'ext',name:'Extensión de cuádriceps',type:'fuerza',sets:3,reps:'12-15',weight:68,rest:75},
-      {id:'gem',name:'Gemelo en prensa',type:'fuerza',sets:3,reps:'10-12',weight:0,rest:60},
+      {id:'gem',name:'Gemelo en prensa',type:'fuerza',sets:4,reps:'10-12',weight:0,rest:60},
       {id:'crunch',name:'Crunch en polea',type:'fuerza',sets:3,reps:'12-15',weight:0,rest:60}
     ]}
   },
-  planVersion: 9,
+  planVersion: 10,
   warmups: {
     espalda: 'General (4 min):\n2 min de remo o bici suave\nDislocaciones con banda o palo: 10\nFace pull liviano: 15\nColgado de la barra: 2 × 20 s (relajado y después hombros abajo)\nAproximación en dominadas:\n1 × 5 con más asistencia que la de trabajo\n1 × 3 con la asistencia de trabajo',
     pecho: 'General (4 min):\n2 min de remo suave\nRotación externa de hombro con banda o polea: 15 por brazo\nFlexiones lentas: 10\nAproximación en press banca:\nBarra sola × 10\n50 % del peso × 6\n75 % × 3',
@@ -384,6 +384,7 @@ const DEFAULT = {
   },
   schedule: {1:'espalda',2:'pecho',3:'piernas',4:'espalda2',5:'pecho2',6:'piernas2'}
 };
+Object.entries(DEFAULT.routines).forEach(([k,r])=>{ r.warmup=DEFAULT.warmups[{espalda2:'espalda',pecho2:'pecho'}[k]||k] });
 
 const S = {tab:'hoy', plan:null, sessions:[], pick:null, workout:null, timer:null, editKey:'espalda', editDraft:null, progEx:null, store:null, confirmDel:null, openSess:null, confirmFinish:false};
 
@@ -979,6 +980,15 @@ document.addEventListener('change',async ev=>{
         const WU=DEFAULT.warmups, map={espalda:'espalda',espalda2:'espalda',pecho:'pecho',pecho2:'pecho',piernas:'piernas',piernas2:'piernas2'};
         Object.entries(S.plan.routines).forEach(([k,r])=>{ if(!r.warmup&&map[k]) r.warmup=WU[map[k]] });
         msg='Agregué el calentamiento de cada día';
+      }
+      if(v<10){ // la rutina queda exactamente como la del análisis (con curl martillo lunes y jueves y una serie más en gemelos, hack y curl femoral); se conservan los pesos
+        const old=S.plan.routines, nk=n=>String(n||'').trim().toLowerCase(), byId={}, byName={};
+        Object.values(old).forEach(r=>r.exercises.forEach(e=>{ if(+e.weight>0){ byId[e.id]=e.weight; byName[nk(e.name)]=e.weight } }));
+        const nr={};
+        Object.entries(DEFAULT.routines).forEach(([k,r])=>{ const c=JSON.parse(JSON.stringify(r)); const mine=((old[k]||{}).exercises||[]); c.exercises.forEach(e=>{ const o=mine.find(x=>x.id===e.id)||mine.find(x=>nk(x.name)===nk(e.name)); const w=(o&&+o.weight>0)?o.weight:(byId[e.id]??byName[nk(e.name)]); if(w!=null) e.weight=w });
+          c.warmup=(old[k]&&old[k].warmup)||c.warmup; nr[k]=c });
+        S.plan.routines=nr; S.plan.schedule=Object.assign({},DEFAULT.schedule);
+        msg='Rutina igual a la del análisis, con tus pesos';
       }
       if(v<DEFAULT.planVersion){ S.plan.planVersion=DEFAULT.planVersion; try{await S.store.savePlan(S.plan); if(msg) setTimeout(()=>toast(msg),400)}catch(e){} }
     }
