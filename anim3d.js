@@ -178,7 +178,7 @@ const renderer=new T.WebGLRenderer({antialias:true,alpha:true});
 renderer.setPixelRatio(Math.min(2,window.devicePixelRatio||1));
 renderer.outputEncoding=T.sRGBEncoding; renderer.shadowMap.enabled=true; renderer.shadowMap.type=T.PCFSoftShadowMap;
 const scene=new T.Scene(), cam=new T.PerspectiveCamera(32,1,.05,50);
-scene.add(new T.HemisphereLight(0xffffff,0x404650,.75));
+const hemi=new T.HemisphereLight(0xffffff,0x404650,.75); scene.add(hemi);
 const key=new T.DirectionalLight(0xffffff,.95); key.position.set(2.2,4.2,2.6); key.castShadow=true;
 key.shadow.mapSize.set(1024,1024); Object.assign(key.shadow.camera,{left:-2.5,right:2.5,top:2.5,bottom:-2.5,near:.5,far:12}); key.shadow.bias=-.0008; key.shadow.radius=4;
 scene.add(key,key.target); const rim=new T.DirectionalLight(0xbcd0ff,.35); rim.position.set(-3,2.5,-3); scene.add(rim);
@@ -227,20 +227,24 @@ Object.keys(BN).forEach(n=>{const m=n.match(/^(index|middle|ring|pinky|thumb)_0(
   ax.applyQuaternion(wq(BN[n]).invert());
   CURL.push({b:BN[n],ax,amt:m[1]==='thumb'?-.75:1,seg:+m[2]})});
 
+const UC0=.6138, UH0=.0221;
 function classify(skm){
   const g=skm.geometry, pos=g.attributes.position, nor=g.attributes.normal, si=g.attributes.skinIndex, sw=g.attributes.skinWeight;
-  const n=pos.count, mg=new Float32Array(n), ms=new Float32Array(n), hw=new Float32Array(n), bones=skm.skeleton.bones;
+  const n=pos.count, mg=new Float32Array(n), ms=new Float32Array(n), hw=new Float32Array(n), shv=new Float32Array(n), bones=skm.skeleton.bones;
   const M=skm.bindMatrix, NM=new T.Matrix3().getNormalMatrix(M), p=new T.Vector3(), nn=new T.Vector3();
-  const uS=J0.sL.clone().sub(P0).dot(U0);
+  let wT=0, uT=-9; {const q=new T.Vector3(); for(let i=0;i<n;i++){let bi=0,bw=-1; for(let k=0;k<4;k++){const w=[sw.getX(i),sw.getY(i),sw.getZ(i),sw.getW(i)][k]; if(w>bw){bw=w;bi=[si.getX(i),si.getY(i),si.getZ(i),si.getW(i)][k]}}
+    const bn=bones[bi].name; q.fromBufferAttribute(pos,i).applyMatrix4(M).sub(P0); if(/spine_02/.test(bn)) wT=Math.max(wT,Math.abs(q.dot(L0))); if(/clavicle/.test(bn)) uT=Math.max(uT,q.dot(U0))}}
+  window.__dbgT=[wT,uT];
+  const uH=J0.hL.clone().sub(P0).dot(U0), KU=(UC0-UH0)/(uT-uH), KL=.1598/wT, uS=.5063; // marcas: cadera y punta del hombro // medidas del torso normalizadas al modelo original
   for(let i=0;i<n;i++){
     p.fromBufferAttribute(pos,i).applyMatrix4(M); nn.fromBufferAttribute(nor,i).applyMatrix3(NM).normalize();
     let bi=0,bw=-1; const gc=(a,k)=>k===0?a.getX(i):k===1?a.getY(i):k===2?a.getZ(i):a.getW(i);
     for(let k=0;k<4;k++){const w=gc(sw,k); if(w>bw){bw=w;bi=gc(si,k)} if(/^head$/i.test(bones[gc(si,k)].name)) hw[i]+=w}
-    const b=bones[bi].name, d=p.clone().sub(P0), l=d.dot(L0), u=d.dot(U0), nf=nn.dot(F0), nl=nn.dot(L0), nu=nn.dot(U0);
+    const b=bones[bi].name, d=p.clone().sub(P0), l=d.dot(L0)*KL, u=UH0+(d.dot(U0)-uH)*KU, nf=nn.dot(F0), nl=nn.dot(L0), nu=nn.dot(U0);
     const side=l>=0?1:-1, al=Math.abs(l);
     const sh=side>0?J0.sL:J0.sR, el=side>0?J0.eL:J0.eR, hp=side>0?J0.hL:J0.hR, kn=side>0?J0.kL:J0.kR, an=side>0?J0.aL:J0.aR;
     let id=0, s=0;
-    if(/upperarm/.test(b) || (/clavicle|spine_03/.test(b) && al>sh.clone().sub(P0).dot(L0)*side*.78)){
+    if(/upperarm/.test(b) || (/clavicle|spine_03/.test(b) && al>.212*.78)){
       const along=Math.abs(p.clone().sub(sh).dot(L0));
       if(along<.13){const so=Math.max(nu,nl*side);
         if(nf>.45){id=MG.deltF;s=smooth(.45,.75,nf)} else if(nf<-.45){id=MG.deltR;s=smooth(.45,.75,-nf)} else if(so>-.05){id=MG.deltS;s=smooth(-.05,.4,so)}
@@ -269,37 +273,38 @@ function classify(skm){
       else if(nf<-.4 && al<.09 && u<uS-.22 && u>.0){id=MG.lowback;s=smooth(.4,.7,-nf)}
     }
     mg[i]=id; ms[i]=s;
+    if(/pelvis|thigh|spine_01/.test(b)){const hu=DIM.hip.u; shv[i]=smooth(hu-.2,hu-.185,u)*(1-smooth(.085,.1,u))}
   }
-  g.setAttribute('mg',new T.BufferAttribute(mg,1)); g.setAttribute('ms',new T.BufferAttribute(ms,1)); g.setAttribute('hw',new T.BufferAttribute(hw,1));
+  g.setAttribute('mg',new T.BufferAttribute(mg,1)); g.setAttribute('ms',new T.BufferAttribute(ms,1)); g.setAttribute('hw',new T.BufferAttribute(hw,1)); g.setAttribute('shv',new T.BufferAttribute(shv,1));
   // cabeza de maniquí: elipsoide ajustado a la cabeza (sin cara ni orejas)
   if(skm.geometry.attributes.position.count>3000){let a=[1e9,-1e9],u=[1e9,-1e9],f=[1e9,-1e9];
     for(let i=0;i<n;i++){if(hw[i]<.6) continue; p.fromBufferAttribute(pos,i).applyMatrix4(M); const d=p.clone().sub(P0), l=d.dot(L0), uu=d.dot(U0), ff=d.dot(F0);
       a=[Math.min(a[0],l),Math.max(a[1],l)]; u=[Math.min(u[0],uu),Math.max(u[1],uu)]; f=[Math.min(f[0],ff),Math.max(f[1],ff)]}
-    const rl=(a[1]-a[0])/2*.86, ru=(u[1]-u[0])/2*1.0, rf=rl*1.16, c=P0.clone().addScaledVector(L0,(a[0]+a[1])/2).addScaledVector(U0,(u[0]+u[1])/2+.004).addScaledVector(F0,f[0]+rf+.006);
+    const rl=(a[1]-a[0])/2*.92, ru=(u[1]-u[0])/2*.93, rf=rl*1.13, c=P0.clone().addScaledVector(L0,(a[0]+a[1])/2).addScaledVector(U0,(u[0]+u[1])/2+.004).addScaledVector(F0,f[0]+rf+.006);
     STU.hc.value.copy(c); STU.bi.value.copy(M).invert(); STU.hr.value.set(rl,ru,rf); STU.hb.value.set(L0.x,U0.x,F0.x,L0.y,U0.y,F0.y,L0.z,U0.z,F0.z)}
 }
 function patch(m){
   m.onBeforeCompile=sh=>{
     sh.uniforms.uAct=actU; sh.uniforms.uRed=redU; sh.uniforms.uCol=colU; sh.uniforms.uHeat=heatU;
-    sh.uniforms.uStu=STU.on; sh.uniforms.uHC=STU.hc; sh.uniforms.uHR=STU.hr; sh.uniforms.uHB=STU.hb; sh.uniforms.uP0=STU.p0; sh.uniforms.uFib=STU.fib; sh.uniforms.uBI=STU.bi;
-    sh.vertexShader='attribute float mg;\nattribute float ms;\nattribute float hw;\nuniform float uAct['+NG+'];\nuniform vec3 uCol['+NG+'];\nuniform vec3 uFib['+NG+'];\nuniform float uStu;\nuniform vec3 uHC;\nuniform vec3 uHR;\nuniform vec3 uP0;\nuniform mat3 uHB;\nuniform mat4 uBI;\nvarying float vAct;\nvarying float vA;\nvarying float vS;\nvarying float vHw;\nvarying vec3 vCol;\nvarying vec3 vRel;\nvarying vec3 vFib;\n'+sh.vertexShader
+    sh.uniforms.uStu=STU.on; sh.uniforms.uHC=STU.hc; sh.uniforms.uHR=STU.hr; sh.uniforms.uHB=STU.hb; sh.uniforms.uP0=STU.p0; sh.uniforms.uFib=STU.fib; sh.uniforms.uBI=STU.bi; sh.uniforms.uShPos={value:m.map?0:1};
+    sh.vertexShader='attribute float mg;\nattribute float ms;\nattribute float hw;\nattribute float shv;\nvarying float vSh;\nuniform float uAct['+NG+'];\nuniform vec3 uCol['+NG+'];\nuniform vec3 uFib['+NG+'];\nuniform float uStu;\nuniform vec3 uHC;\nuniform vec3 uHR;\nuniform vec3 uP0;\nuniform mat3 uHB;\nuniform mat4 uBI;\nvarying float vAct;\nvarying float vA;\nvarying float vS;\nvarying float vHw;\nvarying vec3 vCol;\nvarying vec3 vRel;\nvarying vec3 vFib;\n'+sh.vertexShader
       .replace('#include <beginnormal_vertex>',`#include <beginnormal_vertex>
  vec3 hWp=(bindMatrix*vec4(position,1.)).xyz; vec3 hQ=transpose(uHB)*(hWp-uHC); float hK=length(hQ/uHR); vec3 hE=hQ/max(hK,1e-4);
  float hEgg=mix(.8,1.,smoothstep(-1.,.15,hE.y/uHR.y)); vec3 hE2=vec3(hE.x*hEgg,hE.y,hE.z*hEgg);
  vec3 hLoc=(uBI*vec4(uHC+uHB*hE2,1.)).xyz; float hT=clamp(hw*uStu,0.,1.); hT=smoothstep(.15,.9,hT);
  objectNormal=normalize(mix(objectNormal,normalize((uBI*vec4(uHB*normalize(hE2/(uHR*uHR)),0.)).xyz),hT));`)
       .replace('#include <begin_vertex>',`#include <begin_vertex>
- transformed=mix(transformed,hLoc,hT); vHw=hT;
+ transformed=mix(transformed,hLoc,hT); vHw=hT; vSh=shv;
  vAct=uAct[int(mg+0.5)]*ms; vA=uAct[int(mg+0.5)]; vS=ms*step(.05,uAct[int(mg+0.5)]); vCol=uCol[int(mg+0.5)]; vFib=uFib[int(mg+0.5)];
  vec3 hB=(bindMatrix*vec4(transformed,1.)).xyz-uP0; vRel=transpose(uHB)*hB;`);
-    sh.fragmentShader='varying float vAct;\nvarying float vA;\nvarying float vS;\nvarying float vHw;\nvarying vec3 vCol;\nvarying vec3 vRel;\nvarying vec3 vFib;\nuniform vec3 uRed;\nuniform float uHeat;\nuniform float uStu;\n'+sh.fragmentShader
+    sh.fragmentShader='varying float vSh;\nuniform float uShPos;\nvarying float vAct;\nvarying float vA;\nvarying float vS;\nvarying float vHw;\nvarying vec3 vCol;\nvarying vec3 vRel;\nvarying vec3 vFib;\nuniform vec3 uRed;\nuniform float uHeat;\nuniform float uStu;\n'+sh.fragmentShader
       .replace('#include <map_fragment>',`#include <map_fragment>
  float sFill=0., sLine=0.;
  if(uStu>.5){
   float sMx=max(max(diffuseColor.r,diffuseColor.g),diffuseColor.b), sMn=min(min(diffuseColor.r,diffuseColor.g),diffuseColor.b), sSat=(sMx-sMn)/max(sMx,.001);
   float sLum=dot(diffuseColor.rgb,vec3(.3,.59,.11));
-  vec3 clay=vec3(.34,.35,.37)*(.95+.12*mix(sLum,.35,vHw));
-  float shorts=1.-smoothstep(.12,.22,sSat);
+  vec3 clay=vec3(.25,.258,.272)*(.95+.12*mix(sLum,.35,vHw));
+  float shorts=uShPos>.5?vSh:1.-smoothstep(.12,.22,sSat);
   diffuseColor.rgb=mix(clay,vec3(.035,.037,.042),shorts*(1.-vHw));
   sFill=smoothstep(.42,.56,vS);
   float fb=dot(vec3(abs(vRel.x),vRel.y,vRel.z),vFib)*105.;
@@ -317,10 +322,10 @@ function patch(m){
   float sLn=sOn*smoothstep(.22,.36,vS)*(1.-smoothstep(.38,.5,vS));
   float sHalo=sOn*pow(smoothstep(.0,.3,vS),1.5)*(1.-smoothstep(.36,.46,vS));
   float sFr=pow(1.-abs(dot(normal,normalize(vViewPosition))),3.);
-  totalEmissiveRadiance+=vec3(.9,.12,.02)*sFill*.10+vec3(.28,.36,1.)*(sLn*2.6+sHalo*1.1)+vec3(.4,.47,1.)*sFr*(.16+.9*sOn*smoothstep(.05,.4,vS));
+  totalEmissiveRadiance+=vec3(.9,.12,.02)*sFill*.10+vec3(.22,.30,1.)*(sLn*1.5+sHalo*.6)+vec3(.3,.38,1.)*sFr*(.10+.6*sOn*smoothstep(.05,.4,vS));
  } else totalEmissiveRadiance+=mix(uRed,vCol,uHeat)*clamp(vAct,0.,1.)*.22;`);
   };
-  m.needsUpdate=true;
+  m.side=T.FrontSide; m.needsUpdate=true;
 }
 // subdivisión suave (triángulos PN): el cuerpo queda liso, sin facetas en hombros, codos y cabeza
 function subdiv(g){
@@ -358,11 +363,16 @@ STU.p0.value.copy(P0);
   Object.entries(D).forEach(([k,v])=>STU.fib.value[MG[k]].copy(v.normalize()));
 }
 const OTHER=[]; MODEL.traverse(o=>{if(o.isMesh && !(o.geometry.attributes.position.count>3000)) OTHER.push(o)});
-function studio(on){STU.on.value=on?1:0; OTHER.forEach(o=>o.visible=!on); SKM.forEach(m=>(Array.isArray(m.material)?m.material:[m.material]).forEach(mt=>{if(mt.normalScale) mt.normalScale.set(on?1.15:1,on?1.15:1)}));
+let nmSoft=null;
+function softNormals(on){SKM.forEach(m=>(Array.isArray(m.material)?m.material:[m.material]).forEach(mt=>{if(!mt.normalMap) return; mt.userData.nm0=mt.userData.nm0||mt.normalMap;
+  if(on){ if(!mt.userData.nmSoft){try{const im=mt.userData.nm0.image, c=document.createElement('canvas'); c.width=im.width; c.height=im.height; const x=c.getContext('2d'); x.filter='blur(1.2px)'; x.drawImage(im,0,0);
+      const t=new T.CanvasTexture(c); t.flipY=mt.userData.nm0.flipY; t.wrapS=mt.userData.nm0.wrapS; t.wrapT=mt.userData.nm0.wrapT; t.encoding=mt.userData.nm0.encoding; mt.userData.nmSoft=t}catch(e){mt.userData.nmSoft=mt.userData.nm0}}
+    mt.normalMap=mt.userData.nmSoft} else mt.normalMap=mt.userData.nm0; mt.needsUpdate=true}))}
+function studio(on){STU.on.value=on?1:0; softNormals(on); key.shadow.normalBias=on?.015:0; OTHER.forEach(o=>o.visible=!on); SKM.forEach(m=>(Array.isArray(m.material)?m.material:[m.material]).forEach(mt=>{if(mt.normalScale) mt.normalScale.set(on?1.6:1,on?1.6:1)}));
   if(on){floor.material.color.set('#20242a').convertSRGBToLinear(); MAT.mach.color.set('#8d939b').convertSRGBToLinear(); MAT.mach.metalness=.35; MAT.mach.roughness=.45; MAT.metal.color.set('#c9ced5').convertSRGBToLinear(); MAT.pad.color.set('#17191d').convertSRGBToLinear();
-    rim.intensity=.9; rim.color.set(0x9fb4ff); key.intensity=1.0; fill.intensity=.25; renderer.toneMapping=T.ACESFilmicToneMapping; renderer.toneMappingExposure=.9;
-    floor.material.map=fade; floor.material.transparent=true; floor.material.needsUpdate=true; scene.environment=envTex; scene.environment&&SKM.forEach(m=>(Array.isArray(m.material)?m.material:[m.material]).forEach(mt=>mt.envMapIntensity=.35))}
-  else {mats(); rim.intensity=.35; rim.color.set(0xbcd0ff); key.intensity=.95; fill.intensity=0; renderer.toneMapping=T.NoToneMapping; floor.material.map=null; floor.material.transparent=false; floor.material.needsUpdate=true; scene.environment=null}
+    rim.intensity=1.1; rim.color.set(0x9fb4ff); key.intensity=1.7; fill.intensity=.12; hemi.intensity=.22; key.position.set(-.8,5.2,1.3); renderer.toneMapping=T.ACESFilmicToneMapping; renderer.toneMappingExposure=.8;
+    floor.material.map=fade; floor.material.transparent=true; floor.material.needsUpdate=true; scene.environment=envTex; scene.environment&&SKM.forEach(m=>(Array.isArray(m.material)?m.material:[m.material]).forEach(mt=>mt.envMapIntensity=.18))}
+  else {mats(); rim.intensity=.35; rim.color.set(0xbcd0ff); key.intensity=.95; fill.intensity=0; hemi.intensity=.75; key.position.set(2.2,4.2,2.6); renderer.toneMapping=T.NoToneMapping; floor.material.map=null; floor.material.transparent=false; floor.material.needsUpdate=true; scene.environment=null}
   [MAT.mach,MAT.metal,MAT.pad].forEach(m=>m.needsUpdate=true)}
 const envTex=(()=>{try{const es=new T.Scene(), g=new T.BoxGeometry(1,1,1);
   const room=new T.Mesh(new T.BoxGeometry(12,8,12),new T.MeshBasicMaterial({color:0x1b1e23,side:T.BackSide})); es.add(room);
@@ -865,7 +875,7 @@ function show(id){
   st.meta=meta; st.cur=def;
   scene.remove(props); props.traverse(o=>{if(o.geometry && !o.userData.keep) o.geometry.dispose()}); props=new T.Group(); scene.add(props); DYN={};
   if(def.glb && STU.on.value && !MACH[def.glb]) loadMach(def.glb).then(()=>{if(st.meta===meta) show(id)}).catch(()=>{});
-  def.build(STU.on.value?MACH[def.glb]:null); st.goff=null; st.uy=0; st.up=0; st.user=0; if(ui.hint) ui.hint.hidden=false;
+  def.build(STU.on.value?MACH[def.glb]:null); if(STU.on.value) props.traverse(o=>{if(o.isMesh) o.castShadow=false}); st.goff=null; st.uy=0; st.up=0; st.user=0; if(ui.hint) ui.hint.hidden=false;
   frameOnce();
 }
 function frameOnce(){
@@ -901,7 +911,7 @@ new MutationObserver(retheme).observe(document.documentElement,{attributes:true,
 return {
   attach(host){if(st.host===host) return; st.host=host; buildUI(host)},
   show, start(){if(st.run) return; st.run=true; st.last=null; st.raf=requestAnimationFrame(loop)}, stop(){st.run=false; cancelAnimationFrame(st.raf)},
-  heat(m){st.heat=m||null; heatU.value=m?1:0}, studio, actv:()=>actU.value.map((v,i)=>[i,+v.toFixed(2)]).filter(x=>x[1]), stu:()=>({hc:STU.hc.value.toArray(),hr:STU.hr.value.toArray(),p0:P0.toArray(),L0:L0.toArray(),U0:U0.toArray(),F0:F0.toArray(),head:wp(BN.Head).toArray()}), verts(step){step=step||3; const vs=[], v=new T.Vector3(), acc=new T.Vector3(), t=new T.Vector3();
+  heat(m){st.heat=m||null; heatU.value=m?1:0}, studio, dbgT:()=>window.__dbgT, actv:()=>actU.value.map((v,i)=>[i,+v.toFixed(2)]).filter(x=>x[1]), stu:()=>({hc:STU.hc.value.toArray(),hr:STU.hr.value.toArray(),p0:P0.toArray(),L0:L0.toArray(),U0:U0.toArray(),F0:F0.toArray(),head:wp(BN.Head).toArray()}), verts(step){step=step||3; const vs=[], v=new T.Vector3(), acc=new T.Vector3(), t=new T.Vector3();
    SKM.forEach(m=>{const g=m.geometry, pos=g.attributes.position, si=g.attributes.skinIndex, sw=g.attributes.skinWeight, bones=m.skeleton.bones, inv=m.skeleton.boneInverses, n=pos.count;
      const BM=bones.map((bn,j)=>new T.Matrix4().multiplyMatrices(bn.matrixWorld,inv[j])); const gi=(a,i,k)=>k===0?a.getX(i):k===1?a.getY(i):k===2?a.getZ(i):a.getW(i);
      for(let i=0;i<n;i+=step){ v.fromBufferAttribute(pos,i).applyMatrix4(m.bindMatrix); acc.set(0,0,0); let ws=0;
