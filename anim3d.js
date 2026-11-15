@@ -199,6 +199,7 @@ function setSeg(o,a,b){const d=b.clone().sub(a), l=d.length(); o.position.copy(a
 // ----- modelo y músculos -----
 const MG={pec:1,abs:2,lats:3,rhomb:4,traps:5,deltF:6,deltS:7,deltR:8,biceps:9,triceps:10,forearm:11,glutes:12,quads:13,hams:14,adductors:15,calves:16,lowback:17,obliques:18}, NG=19;
 const actU={value:new Array(NG).fill(0)}, redU={value:new T.Color(css('--muscle')).convertSRGBToLinear()}, colU={value:Array.from({length:NG},()=>new T.Color(1,0,0))}, heatU={value:0};
+const STU={on:{value:0},hc:{value:new T.Vector3()},hr:{value:new T.Vector3(.1,.12,.1)},hb:{value:new T.Matrix3()},p0:{value:new T.Vector3()},bi:{value:new T.Matrix4()},fib:{value:Array.from({length:NG},()=>new T.Vector3(0,1,0))}};
 const MODEL=gltf.scene, BN={}, BIND={}, SKM=[];
 scene.add(MODEL);
 MODEL.traverse(o=>{if(o.isBone) BN[o.name]=o; if(o.isMesh){o.castShadow=true; o.receiveShadow=true; o.frustumCulled=false; if(o.isSkinnedMesh) SKM.push(o);
@@ -228,13 +229,13 @@ Object.keys(BN).forEach(n=>{const m=n.match(/^(index|middle|ring|pinky|thumb)_0(
 
 function classify(skm){
   const g=skm.geometry, pos=g.attributes.position, nor=g.attributes.normal, si=g.attributes.skinIndex, sw=g.attributes.skinWeight;
-  const n=pos.count, mg=new Float32Array(n), ms=new Float32Array(n), bones=skm.skeleton.bones;
+  const n=pos.count, mg=new Float32Array(n), ms=new Float32Array(n), hw=new Float32Array(n), bones=skm.skeleton.bones;
   const M=skm.bindMatrix, NM=new T.Matrix3().getNormalMatrix(M), p=new T.Vector3(), nn=new T.Vector3();
   const uS=J0.sL.clone().sub(P0).dot(U0);
   for(let i=0;i<n;i++){
     p.fromBufferAttribute(pos,i).applyMatrix4(M); nn.fromBufferAttribute(nor,i).applyMatrix3(NM).normalize();
     let bi=0,bw=-1; const gc=(a,k)=>k===0?a.getX(i):k===1?a.getY(i):k===2?a.getZ(i):a.getW(i);
-    for(let k=0;k<4;k++){const w=gc(sw,k); if(w>bw){bw=w;bi=gc(si,k)}}
+    for(let k=0;k<4;k++){const w=gc(sw,k); if(w>bw){bw=w;bi=gc(si,k)} if(/^head$/i.test(bones[gc(si,k)].name)) hw[i]+=w}
     const b=bones[bi].name, d=p.clone().sub(P0), l=d.dot(L0), u=d.dot(U0), nf=nn.dot(F0), nl=nn.dot(L0), nu=nn.dot(U0);
     const side=l>=0?1:-1, al=Math.abs(l);
     const sh=side>0?J0.sL:J0.sR, el=side>0?J0.eL:J0.eR, hp=side>0?J0.hL:J0.hR, kn=side>0?J0.kL:J0.kR, an=side>0?J0.aL:J0.aR;
@@ -251,37 +252,125 @@ function classify(skm){
     } else if(/lowerarm/.test(b)){id=MG.forearm; s=1-smooth(.45,.85,p.clone().sub(el).length()/LEN.fa)}
     else if(/thigh/.test(b)){
       const t=Math.max(0,p.clone().sub(hp).dot(U0.clone().negate()))/hp.distanceTo(kn);
-      if(nf<-.3 && t<.12){id=MG.glutes;s=smooth(.3,.6,-nf)}
-      else{ if(nl*side<-.35 && t<.6){id=MG.adductors;s=smooth(.35,.7,-nl*side)} else if(nf>.1){id=MG.quads;s=smooth(.1,.5,nf)} else if(nf<-.25){id=MG.hams;s=smooth(.25,.6,-nf)}
+      if(nf<-.2 && t<.2){id=MG.glutes;s=smooth(.2,.5,-nf)*(1-smooth(.14,.2,t))}
+      else{ if(nl*side<-.5 && nf<.35 && t<.6){id=MG.adductors;s=smooth(.5,.8,-nl*side)} else if(nf>.1){id=MG.quads;s=smooth(.1,.5,nf)} else if(nf<-.25){id=MG.hams;s=smooth(.25,.6,-nf)}
         s*=smooth(.04,.16,t)*(1-smooth(.82,.96,t)); }
     }
     else if(/calf/.test(b)){const t=p.clone().sub(kn).length()/kn.distanceTo(an); if(nf<-.15){id=MG.calves;s=smooth(.15,.5,-nf)*smooth(.03,.15,t)*(1-smooth(.55,.75,t))}}
     else if(/pelvis/.test(b) && Math.abs(nl)>.55 && al>.1 && u>.03){id=MG.obliques;s=smooth(.55,.8,Math.abs(nl))*(1-smooth(.12,.2,Math.abs(nf)))}
-    else if(/pelvis/.test(b)){ if(nf<-.3 && u<.02){id=MG.glutes;s=smooth(.3,.6,-nf)} else if(nf<-.4 && al<.08 && u>=.02){id=MG.lowback;s=smooth(.4,.7,-nf)} else if(nf>.45 && al<.08 && u>.06){id=MG.abs;s=smooth(.45,.8,nf)} }
+    else if(/pelvis/.test(b)){ if(nf<-.2 && u<.05 && al>.015){id=MG.glutes;s=smooth(.2,.45,-nf)*smooth(.015,.04,al)*(1-smooth(.03,.05,u))} else if(nf<-.4 && al<.08 && u>=.02){id=MG.lowback;s=smooth(.4,.7,-nf)} else if(nf>.45 && al<.08 && u>.06){id=MG.abs;s=smooth(.45,.8,nf)} }
     else if(/spine|clavicle|neck/.test(b)){
-      if(nf>.35 && u>uS-.2 && u<uS+.01 && al>.025 && al<.17 && /spine_03|clavicle|spine_02/.test(b)){id=MG.pec;s=smooth(.35,.7,nf)*smooth(uS-.2,uS-.13,u)}
+      if(nf>.05 && al<.185 && u>uS-.245 && u<uS-.02 && /spine_03|clavicle|spine_02/.test(b)){const q=Math.max(0,al-.05), lb=uS-.215+6*q*q, ub=uS-.095+1.6*q*q; if(u>lb-.025 && u<ub+.025){id=MG.pec;s=smooth(.05,.2,nf)*smooth(lb-.022,lb+.012,u)*(1-smooth(ub-.012,ub+.022,u))*(1-smooth(.15,.18,al))*smooth(.006,.026,al)}}
       else if(nf>.4 && al<.09 && u<uS-.17 && u>.04){id=MG.abs;s=smooth(.4,.75,nf)}
       else if(Math.abs(nl)>.55 && al>.09 && u>.03 && u<uS-.3 && /spine_01|spine_02|pelvis/.test(b)){id=MG.obliques;s=smooth(.55,.8,Math.abs(nl))*(1-smooth(uS-.36,uS-.3,u))}
       else if(nf<-.35 && al<.11 && u>uS-.22 && u<uS-.02){id=MG.rhomb;s=smooth(.35,.7,-nf)*(1-smooth(.08,.11,al))}
       else if(nu>.25 && u>uS-.04 && al>.04 && al<.16){id=MG.traps;s=smooth(.25,.6,nu)}
-      else if(nf<.15 && al>.08 && u>uS-.36 && u<uS-.06 && (Math.abs(nl)>.35 || nf<-.25)){id=MG.lats;s=smooth(.08,.13,al)*(1-smooth(uS-.1,uS-.05,u))*smooth(uS-.36,uS-.3,u)}
+      else if(nf<.2 && al>.06 && u>uS-.42 && u<uS-.06 && (Math.abs(nl)>.3 || nf<-.2)){id=MG.lats;s=smooth(.06,.1,al)*(1-smooth(uS-.1,uS-.05,u))*smooth(uS-.42,uS-.34,u)}
       else if(nf<-.4 && al<.09 && u<uS-.22 && u>.0){id=MG.lowback;s=smooth(.4,.7,-nf)}
     }
     mg[i]=id; ms[i]=s;
   }
-  g.setAttribute('mg',new T.BufferAttribute(mg,1)); g.setAttribute('ms',new T.BufferAttribute(ms,1));
+  g.setAttribute('mg',new T.BufferAttribute(mg,1)); g.setAttribute('ms',new T.BufferAttribute(ms,1)); g.setAttribute('hw',new T.BufferAttribute(hw,1));
+  // cabeza de maniquí: elipsoide ajustado a la cabeza (sin cara ni orejas)
+  if(skm.geometry.attributes.position.count>3000){let a=[1e9,-1e9],u=[1e9,-1e9],f=[1e9,-1e9];
+    for(let i=0;i<n;i++){if(hw[i]<.6) continue; p.fromBufferAttribute(pos,i).applyMatrix4(M); const d=p.clone().sub(P0), l=d.dot(L0), uu=d.dot(U0), ff=d.dot(F0);
+      a=[Math.min(a[0],l),Math.max(a[1],l)]; u=[Math.min(u[0],uu),Math.max(u[1],uu)]; f=[Math.min(f[0],ff),Math.max(f[1],ff)]}
+    const rl=(a[1]-a[0])/2*.86, ru=(u[1]-u[0])/2*1.0, rf=rl*1.16, c=P0.clone().addScaledVector(L0,(a[0]+a[1])/2).addScaledVector(U0,(u[0]+u[1])/2+.004).addScaledVector(F0,f[0]+rf+.006);
+    STU.hc.value.copy(c); STU.bi.value.copy(M).invert(); STU.hr.value.set(rl,ru,rf); STU.hb.value.set(L0.x,U0.x,F0.x,L0.y,U0.y,F0.y,L0.z,U0.z,F0.z)}
 }
 function patch(m){
   m.onBeforeCompile=sh=>{
     sh.uniforms.uAct=actU; sh.uniforms.uRed=redU; sh.uniforms.uCol=colU; sh.uniforms.uHeat=heatU;
-    sh.vertexShader='attribute float mg;\nattribute float ms;\nuniform float uAct['+NG+'];\nuniform vec3 uCol['+NG+'];\nvarying float vAct;\nvarying vec3 vCol;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vAct=uAct[int(mg+0.5)]*ms; vCol=uCol[int(mg+0.5)];');
-    sh.fragmentShader='varying float vAct;\nvarying vec3 vCol;\nuniform vec3 uRed;\nuniform float uHeat;\n'+sh.fragmentShader
-      .replace('#include <map_fragment>','#include <map_fragment>\n vec3 mc=mix(uRed,vCol,uHeat); diffuseColor.rgb=mix(diffuseColor.rgb,mc,clamp(vAct,0.,1.)*.82);')
-      .replace('#include <emissivemap_fragment>','#include <emissivemap_fragment>\n totalEmissiveRadiance+=mix(uRed,vCol,uHeat)*clamp(vAct,0.,1.)*.22;');
+    sh.uniforms.uStu=STU.on; sh.uniforms.uHC=STU.hc; sh.uniforms.uHR=STU.hr; sh.uniforms.uHB=STU.hb; sh.uniforms.uP0=STU.p0; sh.uniforms.uFib=STU.fib; sh.uniforms.uBI=STU.bi;
+    sh.vertexShader='attribute float mg;\nattribute float ms;\nattribute float hw;\nuniform float uAct['+NG+'];\nuniform vec3 uCol['+NG+'];\nuniform vec3 uFib['+NG+'];\nuniform float uStu;\nuniform vec3 uHC;\nuniform vec3 uHR;\nuniform vec3 uP0;\nuniform mat3 uHB;\nuniform mat4 uBI;\nvarying float vAct;\nvarying float vA;\nvarying float vS;\nvarying float vHw;\nvarying vec3 vCol;\nvarying vec3 vRel;\nvarying vec3 vFib;\n'+sh.vertexShader
+      .replace('#include <beginnormal_vertex>',`#include <beginnormal_vertex>
+ vec3 hWp=(bindMatrix*vec4(position,1.)).xyz; vec3 hQ=transpose(uHB)*(hWp-uHC); float hK=length(hQ/uHR); vec3 hE=hQ/max(hK,1e-4);
+ float hEgg=mix(.8,1.,smoothstep(-1.,.15,hE.y/uHR.y)); vec3 hE2=vec3(hE.x*hEgg,hE.y,hE.z*hEgg);
+ vec3 hLoc=(uBI*vec4(uHC+uHB*hE2,1.)).xyz; float hT=clamp(hw*uStu,0.,1.); hT=smoothstep(.15,.9,hT);
+ objectNormal=normalize(mix(objectNormal,normalize((uBI*vec4(uHB*normalize(hE2/(uHR*uHR)),0.)).xyz),hT));`)
+      .replace('#include <begin_vertex>',`#include <begin_vertex>
+ transformed=mix(transformed,hLoc,hT); vHw=hT;
+ vAct=uAct[int(mg+0.5)]*ms; vA=uAct[int(mg+0.5)]; vS=ms*step(.05,uAct[int(mg+0.5)]); vCol=uCol[int(mg+0.5)]; vFib=uFib[int(mg+0.5)];
+ vec3 hB=(bindMatrix*vec4(transformed,1.)).xyz-uP0; vRel=transpose(uHB)*hB;`);
+    sh.fragmentShader='varying float vAct;\nvarying float vA;\nvarying float vS;\nvarying float vHw;\nvarying vec3 vCol;\nvarying vec3 vRel;\nvarying vec3 vFib;\nuniform vec3 uRed;\nuniform float uHeat;\nuniform float uStu;\n'+sh.fragmentShader
+      .replace('#include <map_fragment>',`#include <map_fragment>
+ float sFill=0., sLine=0.;
+ if(uStu>.5){
+  float sMx=max(max(diffuseColor.r,diffuseColor.g),diffuseColor.b), sMn=min(min(diffuseColor.r,diffuseColor.g),diffuseColor.b), sSat=(sMx-sMn)/max(sMx,.001);
+  float sLum=dot(diffuseColor.rgb,vec3(.3,.59,.11));
+  vec3 clay=vec3(.34,.35,.37)*(.95+.12*mix(sLum,.35,vHw));
+  float shorts=1.-smoothstep(.12,.22,sSat);
+  diffuseColor.rgb=mix(clay,vec3(.035,.037,.042),shorts*(1.-vHw));
+  sFill=smoothstep(.42,.56,vS);
+  float fb=dot(vec3(abs(vRel.x),vRel.y,vRel.z),vFib)*105.;
+  sLine=1.-smoothstep(.02,.12,abs(fract(fb)-.5));
+  vec3 org=mix(vec3(.80,.10,.018),vec3(.95,.16,.03),smoothstep(.6,1.,vS));
+  diffuseColor.rgb=mix(diffuseColor.rgb,mix(org,vec3(.45,.04,.01),sLine*.35),sFill);
+ } else {
+  vec3 mc=mix(uRed,vCol,uHeat); diffuseColor.rgb=mix(diffuseColor.rgb,mc,clamp(vAct,0.,1.)*.82);
+ }`)
+      .replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\n if(uStu>.5) roughnessFactor=mix(.55,.62,sFill);')
+      .replace('#include <normal_fragment_maps>','#include <normal_fragment_maps>\n normal=normalize(mix(normal,geometryNormal,max(vHw,uStu*.15)));')
+      .replace('#include <emissivemap_fragment>',`#include <emissivemap_fragment>
+ if(uStu>.5){
+  float sOn=1.;
+  float sLn=sOn*smoothstep(.22,.36,vS)*(1.-smoothstep(.38,.5,vS));
+  float sHalo=sOn*pow(smoothstep(.0,.3,vS),1.5)*(1.-smoothstep(.36,.46,vS));
+  float sFr=pow(1.-abs(dot(normal,normalize(vViewPosition))),3.);
+  totalEmissiveRadiance+=vec3(.9,.12,.02)*sFill*.10+vec3(.28,.36,1.)*(sLn*2.6+sHalo*1.1)+vec3(.4,.47,1.)*sFr*(.16+.9*sOn*smoothstep(.05,.4,vS));
+ } else totalEmissiveRadiance+=mix(uRed,vCol,uHeat)*clamp(vAct,0.,1.)*.22;`);
   };
   m.needsUpdate=true;
 }
+// subdivisión suave (triángulos PN): el cuerpo queda liso, sin facetas en hombros, codos y cabeza
+function subdiv(g){
+  const idx=g.index.array, A=g.attributes, names=Object.keys(A), P=A.position, N=A.normal, n0=P.count;
+  const edge=new Map(), extra=[]; const pa=new T.Vector3(), pb=new T.Vector3(), na=new T.Vector3(), nb=new T.Vector3();
+  const mid=(a,b)=>{const k=a<b?a*1e6+b:b*1e6+a; let v=edge.get(k); if(v!==undefined) return v; v=n0+extra.length; edge.set(k,v); extra.push([a,b]); return v};
+  const ni=[]; for(let t=0;t<idx.length;t+=3){const a=idx[t],b=idx[t+1],c=idx[t+2], ab=mid(a,b), bc=mid(b,c), ca=mid(c,a);
+    ni.push(a,ab,ca, ab,b,bc, ca,bc,c, ab,bc,ca)}
+  const n1=n0+extra.length, out=new T.BufferGeometry();
+  names.forEach(nm=>{const at=A[nm], sz=at.itemSize, src=at.array, arr=new src.constructor(n1*sz); arr.set(src.subarray(0,n0*sz));
+    if(nm==='skinIndex'||nm==='skinWeight') {out.setAttribute(nm,new T.BufferAttribute(arr,sz,at.normalized)); return}
+    extra.forEach(([a,b],i)=>{const o=(n0+i)*sz; for(let k=0;k<sz;k++) arr[o+k]=(src[a*sz+k]+src[b*sz+k])/2});
+    if(nm==='position') extra.forEach(([a,b],i)=>{pa.fromBufferAttribute(P,a); pb.fromBufferAttribute(P,b); na.fromBufferAttribute(N,a).normalize(); nb.fromBufferAttribute(N,b).normalize();
+      const d=pb.clone().sub(pa), w12=d.dot(na), w21=-d.dot(nb);
+      const b210=pa.clone().multiplyScalar(2).add(pb).addScaledVector(na,-w12).multiplyScalar(1/3), b120=pb.clone().multiplyScalar(2).add(pa).addScaledVector(nb,-w21).multiplyScalar(1/3);
+      const m=pa.clone().add(pb).addScaledVector(b210,3).addScaledVector(b120,3).multiplyScalar(1/8); arr.set([m.x,m.y,m.z],(n0+i)*3)});
+    if(nm==='normal') extra.forEach((e,i)=>{const o=(n0+i)*3, l=Math.hypot(arr[o],arr[o+1],arr[o+2])||1; arr[o]/=l; arr[o+1]/=l; arr[o+2]/=l});
+    out.setAttribute(nm,new T.BufferAttribute(arr,sz,at.normalized))});
+  const SI=out.attributes.skinIndex.array, SW=out.attributes.skinWeight.array, si0=A.skinIndex.array, sw0=A.skinWeight.array, wsc=A.skinWeight.normalized?(sw0 instanceof Uint8Array?255:65535):1;
+  extra.forEach(([a,b],i)=>{const m={}; for(const v of [a,b]) for(let k=0;k<4;k++){const w=sw0[v*4+k]/wsc; if(w>0) m[si0[v*4+k]]=(m[si0[v*4+k]]||0)+w/2}
+    const top=Object.entries(m).sort((x,y)=>y[1]-x[1]).slice(0,4), tot=top.reduce((s,x)=>s+x[1],0)||1, o=(n0+i)*4;
+    for(let k=0;k<4;k++){SI[o+k]=top[k]?+top[k][0]:0; SW[o+k]=top[k]?top[k][1]/tot*wsc:0}});
+  out.setIndex(new T.BufferAttribute(new Uint32Array(ni),1));
+  out.groups=[]; g.groups.forEach(gr=>out.addGroup(gr.start*4,gr.count*4,gr.materialIndex));
+  return out;
+}
+SKM.forEach(m=>{if(m.geometry.attributes.position.count>3000 && m.geometry.index){const g0=m.geometry; m.geometry=subdiv(g0); g0.dispose()}});
 SKM.forEach(m=>{classify(m); (Array.isArray(m.material)?m.material:[m.material]).forEach(patch)});
+STU.p0.value.copy(P0);
+{ // dirección perpendicular a las fibras de cada músculo (en ejes l,u,f del cuerpo, lado izquierdo)
+  const R=v=>{const r=rel(v); return V(Math.abs(r.l),r.u,r.f)}, Fv=V(0,0,1), along=(a,b)=>R(b).sub(R(a)).normalize(), acr=(d,n)=>new T.Vector3().crossVectors(d,n).normalize();
+  const ua=along(J0.sL,J0.eL), fa=along(J0.eL,wp(BN.hand_l)), th=along(J0.hL,J0.kL), cf=along(J0.kL,J0.aL);
+  const D={pec:V(-.25,1,0),abs:V(1,0,0),lats:V(1,.8,0),rhomb:V(1,1,0),traps:V(1,1.4,0),deltF:V(1,0,-.3),deltS:V(0,0,1),deltR:V(1,0,.3),biceps:acr(ua,Fv),triceps:acr(ua,Fv),forearm:acr(fa,Fv),
+    glutes:V(1,1.1,0),quads:acr(th,Fv),hams:acr(th,Fv),adductors:V(1,.7,0),calves:acr(cf,Fv),lowback:V(1,0,0),obliques:V(1,-1,.2)};
+  Object.entries(D).forEach(([k,v])=>STU.fib.value[MG[k]].copy(v.normalize()));
+}
+const OTHER=[]; MODEL.traverse(o=>{if(o.isMesh && !(o.geometry.attributes.position.count>3000)) OTHER.push(o)});
+function studio(on){STU.on.value=on?1:0; OTHER.forEach(o=>o.visible=!on); SKM.forEach(m=>(Array.isArray(m.material)?m.material:[m.material]).forEach(mt=>{if(mt.normalScale) mt.normalScale.set(on?1.15:1,on?1.15:1)}));
+  if(on){floor.material.color.set('#20242a').convertSRGBToLinear(); MAT.mach.color.set('#8d939b').convertSRGBToLinear(); MAT.mach.metalness=.35; MAT.mach.roughness=.45; MAT.metal.color.set('#c9ced5').convertSRGBToLinear(); MAT.pad.color.set('#17191d').convertSRGBToLinear();
+    rim.intensity=.9; rim.color.set(0x9fb4ff); key.intensity=1.0; fill.intensity=.25; renderer.toneMapping=T.ACESFilmicToneMapping; renderer.toneMappingExposure=.9;
+    floor.material.map=fade; floor.material.transparent=true; floor.material.needsUpdate=true; scene.environment=envTex; scene.environment&&SKM.forEach(m=>(Array.isArray(m.material)?m.material:[m.material]).forEach(mt=>mt.envMapIntensity=.35))}
+  else {mats(); rim.intensity=.35; rim.color.set(0xbcd0ff); key.intensity=.95; fill.intensity=0; renderer.toneMapping=T.NoToneMapping; floor.material.map=null; floor.material.transparent=false; floor.material.needsUpdate=true; scene.environment=null}
+  [MAT.mach,MAT.metal,MAT.pad].forEach(m=>m.needsUpdate=true)}
+const envTex=(()=>{try{const es=new T.Scene(), g=new T.BoxGeometry(1,1,1);
+  const room=new T.Mesh(new T.BoxGeometry(12,8,12),new T.MeshBasicMaterial({color:0x1b1e23,side:T.BackSide})); es.add(room);
+  const lamp=(c,p,sz)=>{const m=new T.Mesh(g,new T.MeshBasicMaterial({color:c})); m.position.set(...p); m.scale.set(...sz); es.add(m)};
+  lamp(0xffffff,[0,3.9,0],[5,.1,2]); lamp(0x8a96b0,[-5.9,1.5,0],[.1,2,6]); lamp(0xb8c4e0,[5.9,2,1],[.1,1.5,3]); lamp(0x40454e,[0,-3.9,0],[12,.1,12]);
+  const pm=new T.PMREMGenerator(renderer), t=pm.fromScene(es,.02).texture; pm.dispose(); return t}catch(e){return null}})();
+const fill=new T.DirectionalLight(0xdfe6ff,0); fill.position.set(-2.5,1.6,3); scene.add(fill);
+const fade=(()=>{const c=document.createElement('canvas'); c.width=c.height=256; const x=c.getContext('2d'), gr=x.createRadialGradient(128,128,20,128,128,128); gr.addColorStop(0,'#fff'); gr.addColorStop(.55,'rgba(255,255,255,.85)'); gr.addColorStop(1,'rgba(255,255,255,0)'); x.fillStyle=gr; x.fillRect(0,0,256,256); const t=new T.CanvasTexture(c); return t})();
 
 function aim(bone,child,dir){
   bone.updateWorldMatrix(true,true);
@@ -378,6 +467,16 @@ function placeBody(J){
 
 // ----- utilería -----
 let props=new T.Group(); scene.add(props); let DYN={};
+// máquinas modeladas en Blender (se cargan la primera vez que se usan)
+const MACH={}, machP={};
+function loadMach(f){return machP[f]||(machP[f]=fetch((A3.machBase||'')+f).then(r=>{if(!r.ok) throw new Error(f); return r.arrayBuffer()}).then(b=>new Promise((res,rej)=>new T.GLTFLoader().parse(b,'',res,rej))).then(g=>{
+  const parts={}; g.scene.traverse(o=>{if(o.isMesh){o.castShadow=o.receiveShadow=true; o.userData.keep=true; const k=o.name.split('_')[0]; (parts[k]=parts[k]||[]).push(o); if(o.material) o.material.envMapIntensity=1}});
+  MACH[f]=parts; return parts}))}
+const part=(G,k)=>{const g=new T.Group(); (G[k]||[]).forEach(o=>{const c=o.clone(); c.userData.keep=true; c.castShadow=c.receiveShadow=true; c.position.set(0,0,0); c.quaternion.identity(); c.scale.set(1,1,1); c.updateMatrix(); g.add(c)}); return g};
+function stack2(G,key,base,n,sel,trav){const th=.033,gp=.005, g=new T.Group(); props.add(g);
+  for(let k=0;k<n;k++){const pl=part(G,'plate'); pl.position.copy(base).add(V(0,.06+k*(th+gp)+th/2,0)); (k<sel?props:g).add(pl)}
+  const rod=mesh(new T.CylinderGeometry(.007,.007,1,12),MAT.metal); g.add(rod);
+  DYN[key]={g,trav,top:base.clone().add(V(0,.06+n*(th+gp),0)),cap:base.clone().add(V(0,1.86,0)),rod}}
 const B={
   mkBox(s,m){const o=mesh(new T.BoxGeometry(...s),MAT[m]); props.add(o); return o},
   mkCyl(r,m){const o=mesh(new T.CylinderGeometry(r,r,1,28),MAT[m]); props.add(o); return o},
@@ -506,14 +605,26 @@ incline:{
      return arm(f,s,mid(bot,top,p),at(ed,f.F,-.2))});
    return {f,arms,legs:[1,-1].map(s=>leg(f,s,V(s*.21,.098,.53),V(s*.15,1,.25)))}},
  dyn(J,D){J.arms.forEach((a,i)=>placeDumbbell(D,i?'R':'L',B.grip(a),a.kax||J.f.L))}},
-fly:{
- build(){B.box([.4,.07,.4],V(0,.44,.02),'pad'); B.cyl(V(0,0,0),V(0,.41,0),.035,'metal'); B.box([.6,.04,1],V(0,.02,-.1),'pad');
-   B.box([.4,.72,.07],V(0,.86,-.17),'pad'); B.box([.16,1.9,.14],V(0,.95,-.36),'mach'); B.box([.8,.08,.12],V(0,1.62,-.3),'mach'); B.stack('stk',V(0,0,-.6),0,1.88,.24); B.box([.14,.08,.3],V(0,1.9,-.48),'mach');
+fly:{glb:'m_fly.glb',
+ build(G){
+  if(G){ props.add(part(G,'frame')); stack2(G,'stk',V(0,0,-.62),15,10,.24);
+   ['L','R'].forEach(k=>{DYN['hub'+k]=part(G,'hub'); props.add(DYN['hub'+k]); DYN['gr'+k]=part(G,'grip'); props.add(DYN['gr'+k]);
+     const pm=(G.frame||[]).map(o=>o.material).find(m=>/paint/.test(m.name))||MAT.mach; DYN['ar'+k]=mesh(new T.CylinderGeometry(.021,.021,1,24),pm); DYN['dr'+k]=mesh(new T.CylinderGeometry(.019,.019,1,24),pm);
+     DYN['el'+k]=mesh(new T.SphereGeometry(.024,20,14),pm); DYN['tp'+k]=mesh(new T.CylinderGeometry(.024,.024,.012,24),MAT.pad); [DYN['ar'+k],DYN['dr'+k],DYN['el'+k],DYN['tp'+k]].forEach(o=>props.add(o))});
+   return}
+  B.box([.4,.07,.4],V(0,.44,.02),'pad'); B.cyl(V(0,0,0),V(0,.41,0),.035,'metal'); B.box([.6,.04,1],V(0,.02,-.1),'pad');
+   B.box([.4,.72,.07],V(0,.86,-.17),'pad'); B.box([.16,1.9,.14],V(0,.95,-.36),'mach'); B.box([.8,.08,.12],V(0,1.62,-.3),'mach'); B.stack('stk',V(0,0,-.62),0,1.88,.24); B.box([.14,.08,.3],V(0,1.9,-.48),'mach');
    ['lvL','lvR','hdL','hdR'].forEach(k=>B.dyn(k,()=>B.mkCyl(k[0]==='l'?.022:.02,k[0]==='l'?'metal':'mach')))},
  pose(p){const f=frame(V(0,.545,.012),Y,V(0,0,1)), ph=rad(lerp(96,12,p));
    const arms=[1,-1].map(s=>{const d=V(s*Math.sin(ph),-.08,Math.cos(ph)).normalize(); return arm(f,s,at(f.sh(s),d,.95*LEN.R),V(s*.3,-1,-.3))});
    return {f,arms,legs:seatedLegs(f)}},
- dyn(J,D){const y=J.f.sL.y+.2; J.arms.forEach((a,i)=>{const s=i?-1:1, k=i?'R':'L', hd=B.grip(a); B.seg(D['lv'+k],V(s*.3,y,-.28),V(hd.x,y,hd.z)); B.seg(D['hd'+k],V(hd.x,y,hd.z),V(hd.x,hd.y-.07,hd.z))})}},
+ dyn(J,D){
+  if(D.hubL){ J.arms.forEach((a,i)=>{const s=i?-1:1, k=i?'R':'L', hd=B.grip(a), pv=V(s*.21,1.555,-.01), ang=Math.atan2(hd.x-pv.x,hd.z-pv.z);
+     D['hub'+k].position.copy(pv); D['hub'+k].rotation.set(0,ang,0);
+     const yA=1.535, el=V(hd.x,yA,hd.z), top=V(hd.x,hd.y+.115,hd.z);
+     B.seg(D['ar'+k],V(pv.x,yA,pv.z),el); D['el'+k].position.copy(el); B.seg(D['dr'+k],el,top); D['tp'+k].position.copy(V(hd.x,hd.y-.115,hd.z));
+     D['gr'+k].position.copy(hd)}); return}
+  const y=J.f.sL.y+.2; J.arms.forEach((a,i)=>{const s=i?-1:1, k=i?'R':'L', hd=B.grip(a); B.seg(D['lv'+k],V(s*.3,y,-.28),V(hd.x,y,hd.z)); B.seg(D['hd'+k],V(hd.x,y,hd.z),V(hd.x,hd.y-.07,hd.z))})}},
 skull:{
  build(){flatBench(); mkBarbell(.13)},
  pose(p){const f=LYING(), a0=Math.atan2(.3,.95)+rad(7)*(1-p), du=at(V(0,0,0),f.F,Math.cos(a0),f.U,Math.sin(a0)).normalize(), bend=rad(lerp(126,4,p));
@@ -752,8 +863,9 @@ function resize(){const h=st.host; if(!h) return; const w=h.clientWidth||1, hh=h
 function show(id){
   const meta=A3.meta(id)||META[0], def=P[meta.id];
   st.meta=meta; st.cur=def;
-  scene.remove(props); props.traverse(o=>{if(o.geometry) o.geometry.dispose()}); props=new T.Group(); scene.add(props); DYN={};
-  def.build(); st.goff=null; st.uy=0; st.up=0; st.user=0; if(ui.hint) ui.hint.hidden=false;
+  scene.remove(props); props.traverse(o=>{if(o.geometry && !o.userData.keep) o.geometry.dispose()}); props=new T.Group(); scene.add(props); DYN={};
+  if(def.glb && STU.on.value && !MACH[def.glb]) loadMach(def.glb).then(()=>{if(st.meta===meta) show(id)}).catch(()=>{});
+  def.build(STU.on.value?MACH[def.glb]:null); st.goff=null; st.uy=0; st.up=0; st.user=0; if(ui.hint) ui.hint.hidden=false;
   frameOnce();
 }
 function frameOnce(){
@@ -768,7 +880,7 @@ function frameOnce(){
   for(let it=0;it<4;it++){let moved=false;
     J.arms.forEach(a=>{if(!a.t||!a.grip||!a.tt) return; const err=a.grip.clone().sub(a.tt); if(err.length()<.0008) return; a.off.sub(err); moved=true});
     if(!moved) break; placeBody(J)}
-  st.goff=J.arms.map(a=>a.off?a.off.clone().multiplyScalar(.9):null); const arr=actU.value; arr.fill(0); if(st.heat) Object.entries(st.heat).forEach(([g,v])=>{if(MG[g]){arr[MG[g]]=v[0]; colU.value[MG[g]].set(v[1]).convertSRGBToLinear()}}); else Object.entries(meta.work).forEach(([g,w])=>{if(MG[g]) arr[MG[g]]=w*Math.min(1,.2+.55*ph.effort*(.5+.5*p)+.25*p)});
+  st.goff=J.arms.map(a=>a.off?a.off.clone().multiplyScalar(.9):null); const arr=actU.value; arr.fill(0); if(st.heat) Object.entries(st.heat).forEach(([g,v])=>{if(MG[g]){arr[MG[g]]=v[0]; colU.value[MG[g]].set(v[1]).convertSRGBToLinear()}}); else Object.entries(meta.work).forEach(([g,w])=>{if(STU.on.value&&w<.7) return; if(MG[g]) arr[MG[g]]=w*Math.min(1,.2+.55*ph.effort*(.5+.5*p)+.25*p)});
   J.p=p; if(def.dyn) def.dyn(J,DYN); if(DYN.stk) B.lift(DYN.stk,clamp(p));
   if(ui.ph){ui.ph.textContent=up?meta.lab[0]:meta.lab[1]; ui.ph.classList.toggle('up',up)}
   const c=st.camO||meta.cam, sway=(st.user||st.camO)?0:Math.sin(st.wall*.35)*rad(14);
@@ -789,7 +901,7 @@ new MutationObserver(retheme).observe(document.documentElement,{attributes:true,
 return {
   attach(host){if(st.host===host) return; st.host=host; buildUI(host)},
   show, start(){if(st.run) return; st.run=true; st.last=null; st.raf=requestAnimationFrame(loop)}, stop(){st.run=false; cancelAnimationFrame(st.raf)},
-  heat(m){st.heat=m||null; heatU.value=m?1:0}, verts(step){step=step||3; const vs=[], v=new T.Vector3(), acc=new T.Vector3(), t=new T.Vector3();
+  heat(m){st.heat=m||null; heatU.value=m?1:0}, studio, actv:()=>actU.value.map((v,i)=>[i,+v.toFixed(2)]).filter(x=>x[1]), stu:()=>({hc:STU.hc.value.toArray(),hr:STU.hr.value.toArray(),p0:P0.toArray(),L0:L0.toArray(),U0:U0.toArray(),F0:F0.toArray(),head:wp(BN.Head).toArray()}), verts(step){step=step||3; const vs=[], v=new T.Vector3(), acc=new T.Vector3(), t=new T.Vector3();
    SKM.forEach(m=>{const g=m.geometry, pos=g.attributes.position, si=g.attributes.skinIndex, sw=g.attributes.skinWeight, bones=m.skeleton.bones, inv=m.skeleton.boneInverses, n=pos.count;
      const BM=bones.map((bn,j)=>new T.Matrix4().multiplyMatrices(bn.matrixWorld,inv[j])); const gi=(a,i,k)=>k===0?a.getX(i):k===1?a.getY(i):k===2?a.getZ(i):a.getW(i);
      for(let i=0;i<n;i+=step){ v.fromBufferAttribute(pos,i).applyMatrix4(m.bindMatrix); acc.set(0,0,0); let ws=0;
