@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.11.16-1";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.11.16-2";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -845,6 +845,11 @@ function findEx(id){
   for(const s of S.sessions){const e=(s.entries||[]).find(x=>x.exId===id); if(e) return {id,name:e.name,type:e.type}}
   return null;
 }
+// ---------- botón Atrás del celular: cierra lo último que abriste dentro de la app ----------
+const NAV=[];
+function navPush(kind,undo){ if(NAV.length&&NAV[NAV.length-1].kind===kind) return; NAV.push({kind,undo}); try{history.pushState({nav:NAV.length},'')}catch(e){} }
+function navClose(kind){ const i=NAV.map(n=>n.dead?'':n.kind).lastIndexOf(kind); if(i<0) return false; if(i===NAV.length-1){ history.back(); return true } NAV[i].dead=true; return false }
+window.addEventListener('popstate',()=>{ const n=NAV.pop(); if(!n) return; if(n.dead){ if(NAV.length) history.back(); return } n.undo() });
 async function openTech(id){
   const ex=findEx(id); if(!ex) return;
   const sh=document.getElementById('sheet'), msg=document.getElementById('sheet-msg'), stage=document.getElementById('sheet-stage');
@@ -852,7 +857,7 @@ async function openTech(id){
   document.getElementById('sheet-title').textContent=ex.name;
   document.getElementById('sheet-yt').href=ytLink(ex.name);
   document.getElementById('sheet-info').innerHTML=m?`<div class="tags">${m.main.map(x=>`<span class="tag">${esc(x)}</span>`).join('')}${m.sec.map(x=>`<span class="tag b">${esc(x)}</span>`).join('')}</div><p>${esc(m.cue)}</p><ol>${m.steps.map(x=>`<li>${esc(x)}</li>`).join('')}</ol>`:'';
-  sh.hidden=false; TECH.open=true; document.body.style.overflow='hidden';
+  sh.hidden=false; TECH.open=true; document.body.style.overflow='hidden'; navPush('tech',closeTechNow);
   if(!m){msg.hidden=false; msg.textContent='Todavía no hay animación 3D para este ejercicio. Podés ver la técnica en video.'; if(TECH.eng) TECH.eng.stop(); return}
   msg.hidden=false; msg.textContent=TECH.eng?'':'Cargando cuerpo 3D…'; if(TECH.eng) msg.hidden=true;
   try{
@@ -876,12 +881,14 @@ function exHistHTML(id){
     return `<div class="hl"><span class="d">${fmtDate(s.date)}</span><span class="v">${ss.length?ss.map(x=>{const t=`${+x.w?fmtKg(x.w)+' × ':''}${x.r}`; return `<span style="white-space:nowrap">${x===top&&best&&x===best.x?`<b>${t}</b>`:t}</span>`}).join(' · '):'—'}</span></div>`}).join('')+`</div>`;
   return stats+`<div class="card" style="padding:12px">${chart(id,[...ids])}</div>`+list+(rows.length>30?`<div class="muted" style="font-size:.8rem;text-align:center">Mostrando las últimas 30 sesiones</div>`:'');
 }
-function openExHist(id){const ex=findEx(id); if(!ex) return; document.getElementById('hsheet-title').textContent=ex.name; document.getElementById('hsheet-body').innerHTML=exHistHTML(id); document.getElementById('hsheet').hidden=false; document.body.style.overflow='hidden'}
-function closeExHist(){document.getElementById('hsheet').hidden=true; if(!TECH.open) document.body.style.overflow=''}
+function openExHist(id){const ex=findEx(id); if(!ex) return; document.getElementById('hsheet-title').textContent=ex.name; document.getElementById('hsheet-body').innerHTML=exHistHTML(id); document.getElementById('hsheet').hidden=false; document.body.style.overflow='hidden'; navPush('hist',closeExHistNow)}
+function closeExHist(){ if(!navClose('hist')) closeExHistNow() }
+function closeExHistNow(){document.getElementById('hsheet').hidden=true; if(!TECH.open) document.body.style.overflow=''}
 document.getElementById('hsheet-close').addEventListener('click',closeExHist);
 document.getElementById('hsheet').addEventListener('click',e=>{if(e.target.id==='hsheet') closeExHist()});
 document.addEventListener('keydown',e=>{const h=document.getElementById('hsheet'); if(!h.hidden&&e.key==='Escape') closeExHist(); if(h.hidden&&(e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.act==='exhist'){e.preventDefault(); openExHist(e.target.dataset.ex)}});
-function closeTech(){document.getElementById('sheet').hidden=true; TECH.open=false; document.body.style.overflow=''; if(TECH.eng) TECH.eng.stop()}
+function closeTech(){ if(!navClose('tech')) closeTechNow() }
+function closeTechNow(){document.getElementById('sheet').hidden=true; TECH.open=false; document.body.style.overflow=''; if(TECH.eng) TECH.eng.stop()}
 document.getElementById('sheet-close').addEventListener('click',closeTech);
 document.getElementById('sheet').addEventListener('click',e=>{if(e.target.id==='sheet') closeTech()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&TECH.open) closeTech()});
@@ -889,7 +896,10 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&TECH.open) closeTec
 // ---------- events ----------
 document.addEventListener('click',async ev=>{
   const t=ev.target.closest('[data-tab],[data-act]'); if(!t) return;
-  if(t.dataset.tab){S.tab=t.dataset.tab; S.confirmDel=null; render(); window.scrollTo(0,0); return}
+  if(t.dataset.tab){ const nt=t.dataset.tab;
+    if(nt==='hoy'&&S.tab!=='hoy'&&navClose('tab')) return;
+    if(nt!=='hoy'&&S.tab==='hoy') navPush('tab',()=>{S.tab='hoy'; S.confirmDel=null; render(); window.scrollTo(0,0)});
+    S.tab=nt; S.confirmDel=null; render(); window.scrollTo(0,0); return}
   const a=t.dataset.act, ei=+t.dataset.ei, si=+t.dataset.si, i=+t.dataset.i;
   const W=S.workout;
   switch(a){
@@ -900,7 +910,9 @@ document.addEventListener('click',async ev=>{
     case 'bk-import': S.bkImport=true; S.bkText=null; render(); break;
     case 'bk-cancel': S.bkImport=false; render(); break;
     case 'bk-do': {const el=document.getElementById('bk-text'); await backupImport(el?el.value:''); break}
-    case 'pick': S.pick=t.dataset.k||null; S.pickDow=t.dataset.d!=null?+t.dataset.d:null; render(); break;
+    case 'pick': { const was=S.pickDow!=null||S.pick; S.pick=t.dataset.k||null; S.pickDow=t.dataset.d!=null?+t.dataset.d:null; const today=new Date().getDay();
+      if(S.pickDow===today&&!S.pick){ S.pickDow=null; navClose('pick') } else if(!was&&(S.pickDow!=null||S.pick)) navPush('pick',()=>{S.pick=null; S.pickDow=null; render()});
+      render(); break }
     case 'start': startWorkout(t.dataset.k); window.scrollTo(0,0); break;
     case 'set': {const s=W.entries[ei].sets[si]; s.done=!s.done; if(s.done&&s.r==='') s.r=s.ph||''; saveDraft(); render();
       if(s.done){const ex=(S.plan.routines[W.key].exercises.find(x=>x.id===W.entries[ei].exId)||{rest:90}); startTimer(ex.rest)} break}
@@ -924,9 +936,9 @@ document.addEventListener('click',async ev=>{
     case 'tab-rut': S.tab='rut'; render(); setTimeout(()=>{const e=[...document.querySelectorAll('h2')].find(x=>x.textContent==='Aviso de descanso'); if(e) e.scrollIntoView({block:'center'})},50); break;
     case 'n-set': try{NATIVE.openSettings()}catch(e){} break;
     case 'n-test': try{NATIVE.test(10); toast('Apagá la pantalla: suena en 10 s')}catch(e){} break;
-    case 'addex': S.addOpen=!S.addOpen; render(); break;
-    case 'addnew': S.addOpen=false; S.editDraft.exercises.push({id:uid('e'),name:'Nuevo ejercicio',type:'fuerza',sets:3,reps:'10-12',weight:0,rest:90}); render(); setTimeout(()=>{const el=document.getElementById('en-'+(S.editDraft.exercises.length-1)); if(el){el.focus(); el.select()}},50); break;
-    case 'addpick': { const src=pickList().find(x=>x.id===t.dataset.id); if(!src) break; S.addOpen=false;
+    case 'addex': S.addOpen=!S.addOpen; if(S.addOpen) navPush('add',()=>{S.addOpen=false; render()}); else navClose('add'); render(); break;
+    case 'addnew': S.addOpen=false; navClose('add'); S.editDraft.exercises.push({id:uid('e'),name:'Nuevo ejercicio',type:'fuerza',sets:3,reps:'10-12',weight:0,rest:90}); render(); setTimeout(()=>{const el=document.getElementById('en-'+(S.editDraft.exercises.length-1)); if(el){el.focus(); el.select()}},50); break;
+    case 'addpick': { const src=pickList().find(x=>x.id===t.dataset.id); if(!src) break; S.addOpen=false; navClose('add');
       const taken=S.editDraft.exercises.some(e=>e.id===src.id);
       S.editDraft.exercises.push({id:taken?uid('e'):src.id,name:src.name,type:src.type,sets:src.sets,reps:src.reps,weight:src.weight,rest:src.rest});
       render(); toast(`Agregado: ${src.name}. Tocá Guardar cambios`); break; }
