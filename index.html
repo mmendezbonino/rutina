@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.11.15-1";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.11.16-1";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -73,6 +73,18 @@ button:disabled{opacity:.35;cursor:default}
 .row+.row::before{content:"";position:absolute;top:0;left:66px;right:0;height:1px;background:var(--line)}
 .tile{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:.95rem;flex:none}
 .row-main{flex:1;min-width:0}
+.row.tap{cursor:pointer}
+.row.tap:active{background:var(--surface-2)}
+.hlist{display:flex;flex-direction:column;border-radius:16px;background:var(--surface);overflow:hidden}
+.hl{display:flex;justify-content:space-between;gap:12px;padding:11px 14px;align-items:baseline}
+.hl+.hl{border-top:1px solid var(--line)}
+.hl .d{color:var(--fg-2);font-size:.85rem;white-space:nowrap;text-transform:capitalize}
+.hl .v{font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.hl .v b{color:var(--accent)}
+.hstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.hstats div{background:var(--surface);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.hstats b{font-size:1.05rem}
+.hstats span{color:var(--fg-2);font-size:.75rem}
 .row-title{font-weight:600;font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row-sub{font-size:.83rem;color:var(--fg-2);margin-top:2px}
 .row-sub b{color:var(--fg);font-weight:600}
@@ -285,6 +297,12 @@ nav.tabs button[aria-current="page"]{color:var(--azul);font-weight:700;border-to
 
 <div class="app" id="app"><div class="empty">Cargando…</div></div>
 <div id="timer" hidden></div>
+<div id="hsheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="hsheet-title">
+  <div class="sheet-in">
+    <div class="sheet-h"><div style="min-width:0"><div class="over">Historial</div><h2 id="hsheet-title">Ejercicio</h2></div><button class="icon-btn" id="hsheet-close" aria-label="Cerrar">✕</button></div>
+    <div id="hsheet-body" style="display:flex;flex-direction:column;gap:12px"></div>
+  </div>
+</div>
 <div id="toast" class="toast" hidden></div>
 <div id="sheet" class="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheet-title">
   <div class="sheet-in">
@@ -620,7 +638,7 @@ function viewHoy(){
       if(ex.type==='cardio'){const cc=last.e.cardio||{}; sub+=` · última <b>${cc.min||0} min</b>`}
       else{const best=(last.e.sets||[]).reduce((a,x)=>!a||x.w>a.w?x:a,null); if(best) sub+=` · última <b>${fmtKg(best.w)} × ${best.r}</b>`}
     }
-    return `<div class="row"><div class="ftile" style="${tileStyle(c)}">${fig(ex,c)}<span class="fnum">${i+1}</span></div><div class="row-main"><div class="row-title">${esc(ex.name)}</div><div class="row-sub">${sub}</div>${suggestUp(ex,last)?'<span class="badge up" style="display:inline-block;margin-top:6px">Subí peso</span>':''}</div><button class="vid" data-act="tech" data-ex="${esc(ex.id)}" aria-label="Ver técnica de ${esc(ex.name)}">${IC_PLAY}</button></div>`;
+    return `<div class="row tap" data-act="exhist" data-ex="${esc(ex.id)}" role="button" tabindex="0" aria-label="Historial de ${esc(ex.name)}"><div class="ftile" style="${tileStyle(c)}">${fig(ex,c)}<span class="fnum">${i+1}</span></div><div class="row-main"><div class="row-title">${esc(ex.name)}</div><div class="row-sub">${sub}</div>${suggestUp(ex,last)?'<span class="badge up" style="display:inline-block;margin-top:6px">Subí peso</span>':''}</div><button class="vid" data-act="tech" data-ex="${esc(ex.id)}" aria-label="Ver técnica de ${esc(ex.name)}">${IC_PLAY}</button></div>`;
   }).join('')+`</div>`;
   h+=`<button class="btn primary block" data-act="start" data-k="${key}">Empezar entrenamiento</button>`;
   return h+cloudNote();
@@ -843,6 +861,26 @@ async function openTech(id){
     msg.hidden=true; TECH.eng.show(aid); TECH.eng.start();
   }catch(e){TECH.loading=null; msg.hidden=false; msg.textContent='No se pudo cargar la animación. Revisá la conexión y volvé a intentar.'}
 }
+function exHistHTML(id){
+  const ex=findEx(id); if(!ex) return '';
+  const nk=n=>String(n||'').trim().toLowerCase(), ids=new Set([id]);
+  Object.values(S.plan.routines).forEach(r=>r.exercises.forEach(e=>{if(nk(e.name)===nk(ex.name)) ids.add(e.id)}));
+  const rows=S.sessions.map(s=>({s,e:(s.entries||[]).find(x=>ids.has(x.exId)||nk(x.name)===nk(ex.name))})).filter(x=>x.e);
+  if(!rows.length) return `<div class="empty" style="padding:24px 8px">Todavía no hiciste este ejercicio. Cuando lo registres, acá vas a ver cada sesión.</div>`;
+  if(ex.type==='cardio') return `<div class="hlist">`+rows.map(({s,e})=>{const c=e.cardio||{}; return `<div class="hl"><span class="d">${fmtDate(s.date)}</span><span class="v">${c.min||'—'} min${c.dist?` · ${fmtKg(c.dist)} km`:''}${c.level?` · nivel ${esc(c.level)}`:''}</span></div>`}).join('')+`</div>`;
+  const e1=x=>(+x.w||0)*(1+(+x.r||0)/30), ok=e=>(e.sets||[]).filter(x=>+x.r>0);
+  let best=null; rows.forEach(({s,e})=>ok(e).forEach(x=>{if(!best||e1(x)>e1(best.x)||(!+x.w&&!+best.x.w&&+x.r>+best.x.r)) best={x,s}}));
+  const lastE=rows[0].e, lastTop=ok(lastE).reduce((a,x)=>(+x.w>+a.w||(+x.w===+a.w&&+x.r>+a.r))?x:a,ok(lastE)[0]||{w:0,r:0});
+  const stats=`<div class="hstats"><div><b>${rows.length}</b><span>Sesiones</span></div><div><b>${best?(+best.x.w?fmtKg(best.x.w)+' × '+best.x.r:best.x.r+' reps'):'—'}</b><span>Mejor serie</span></div><div><b>${+lastTop.w?fmtKg(lastTop.w)+' kg':(lastTop.r||'—')+' reps'}</b><span>Última vez</span></div></div>`;
+  const list=`<div class="hlist">`+rows.slice(0,30).map(({s,e})=>{const ss=ok(e); const top=ss.reduce((a,x)=>e1(x)>e1(a)?x:a,ss[0]);
+    return `<div class="hl"><span class="d">${fmtDate(s.date)}</span><span class="v">${ss.length?ss.map(x=>{const t=`${+x.w?fmtKg(x.w)+' × ':''}${x.r}`; return `<span style="white-space:nowrap">${x===top&&best&&x===best.x?`<b>${t}</b>`:t}</span>`}).join(' · '):'—'}</span></div>`}).join('')+`</div>`;
+  return stats+`<div class="card" style="padding:12px">${chart(id,[...ids])}</div>`+list+(rows.length>30?`<div class="muted" style="font-size:.8rem;text-align:center">Mostrando las últimas 30 sesiones</div>`:'');
+}
+function openExHist(id){const ex=findEx(id); if(!ex) return; document.getElementById('hsheet-title').textContent=ex.name; document.getElementById('hsheet-body').innerHTML=exHistHTML(id); document.getElementById('hsheet').hidden=false; document.body.style.overflow='hidden'}
+function closeExHist(){document.getElementById('hsheet').hidden=true; if(!TECH.open) document.body.style.overflow=''}
+document.getElementById('hsheet-close').addEventListener('click',closeExHist);
+document.getElementById('hsheet').addEventListener('click',e=>{if(e.target.id==='hsheet') closeExHist()});
+document.addEventListener('keydown',e=>{const h=document.getElementById('hsheet'); if(!h.hidden&&e.key==='Escape') closeExHist(); if(h.hidden&&(e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.act==='exhist'){e.preventDefault(); openExHist(e.target.dataset.ex)}});
 function closeTech(){document.getElementById('sheet').hidden=true; TECH.open=false; document.body.style.overflow=''; if(TECH.eng) TECH.eng.stop()}
 document.getElementById('sheet-close').addEventListener('click',closeTech);
 document.getElementById('sheet').addEventListener('click',e=>{if(e.target.id==='sheet') closeTech()});
@@ -856,6 +894,7 @@ document.addEventListener('click',async ev=>{
   const W=S.workout;
   switch(a){
     case 'tech': openTech(t.dataset.ex); break;
+    case 'exhist': openExHist(t.dataset.ex); break;
     case 'bk-copy': {const txt=backupJSON(); try{await navigator.clipboard.writeText(txt); toast('Respaldo copiado'); S.bkText=null}catch(e){S.bkText=txt; toast('Copialo desde el cuadro de abajo')} render(); break}
     case 'bk-export': {try{const b=new Blob([backupJSON()],{type:'application/json'}), u=URL.createObjectURL(b), a=document.createElement('a'); a.href=u; a.download='respaldo-rutina-'+new Date().toISOString().slice(0,10)+'.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),2000); toast('Respaldo descargado')}catch(e){toast('No se pudo descargar. Usá Copiar.')} break}
     case 'bk-import': S.bkImport=true; S.bkText=null; render(); break;
