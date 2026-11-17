@@ -13,6 +13,13 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
+import android.content.SharedPreferences;
+import android.media.AudioAttributes;
+import android.media.AudioFormat;
+import android.media.AudioTrack;
+import android.media.MediaMetadata;
+import android.media.session.MediaSession;
+import android.media.session.PlaybackState;
 
 /**
  * Descanso en curso: muestra la cuenta regresiva en la pantalla de bloqueo y en la barra de notificaciones
@@ -22,6 +29,16 @@ import android.os.PowerManager;
 public class RestService extends Service {
     static final String CH_RUN = "contador";
     static final int ID_RUN = 6;
+    static final String CH_WEAR = "pulsera";
+    static final int ID_WEAR = 9;
+    /** Cómo se muestra el contador en la pulsera: "off", "media" (control de música) o "notif" (notificación que se actualiza). */
+    static String wearMode(Context c) { return c.getSharedPreferences("rutina", MODE_PRIVATE).getString("wear", "off"); }
+    static void setWearMode(Context c, String m) { c.getSharedPreferences("rutina", MODE_PRIVATE).edit().putString("wear", m).apply(); }
+
+    private MediaSession ms;
+    private AudioTrack silence;
+    private long lastWearNotif = 0;
+    private final Runnable tick = new Runnable() { @Override public void run() { wearTick(); } };
 
     /** Hora (ms) en que termina el descanso; 0 si no hay descanso en curso. */
     static volatile long end = 0;
@@ -52,6 +69,12 @@ public class RestService extends Service {
         ch.setShowBadge(false);
         ch.setLockscreenVisibility(Notification.VISIBILITY_PUBLIC);
         c.getSystemService(NotificationManager.class).createNotificationChannel(ch);
+        NotificationChannel w = new NotificationChannel(CH_WEAR, "Contador en la pulsera", NotificationManager.IMPORTANCE_DEFAULT);
+        w.setDescription("Tiempo que queda de descanso, para que lo muestre el reloj o la pulsera");
+        w.setSound(null, null);
+        w.enableVibration(false);
+        w.setShowBadge(false);
+        c.getSystemService(NotificationManager.class).createNotificationChannel(w);
     }
 
     @Override
@@ -63,15 +86,17 @@ public class RestService extends Service {
                 next = in.getStringExtra("next");
                 if (next == null) next = "";
                 if (end <= System.currentTimeMillis()) { goForeground(); finishRest(); break; }
+                wearStart();
                 goForeground();
                 arm();
                 break;
             case "add":
-                if (end > 0) { end += 15000; Notif.schedule(this, end); goForeground(); arm(); }
+                if (end > 0) { end += 15000; Notif.schedule(this, end); goForeground(); arm(); lastWearNotif = 0; wearTick(); }
                 break;
             case "skip":
             case "stop":
                 end = 0;
+                wearStop();
                 Notif.cancel(this);
                 quit(0);
                 break;
@@ -111,9 +136,103 @@ public class RestService extends Service {
         h.removeCallbacks(done);
         if (end > System.currentTimeMillis() + 500) { arm(); return; } // se sumaron segundos mientras tanto
         end = 0;
+        wearStop();
         Notif.fire(this);
         quit(2500); // deja terminar el pitido antes de soltar el celular
     }
+
+    // ---------- contador en la pulsera ----------
+    private void wearStart() {
+        String m = wearMode(this);
+        if ("media".equals(m)) mediaStart();
+        lastWearNotif = 0;
+        h.removeCallbacks(tick);
+        if (!"off".equals(m)) wearTick();
+    }
+
+    private void wearTick() {
+        h.removeCallbacks(tick);
+        if (end <= 0) return;
+        long left = Math.max(0, end - System.currentTimeMillis());
+        String m = wearMode(this);
+        String t = "Descanso " + mmss(left);
+        if ("media".equals(m) && ms != null) {
+            ms.setMetadata(new MediaMetadata.Builder()
+                    .putString(MediaMetadata.METADATA_KEY_TITLE, t)
+                    .putString(MediaMetadata.METADATA_KEY_ARTIST, next.isEmpty() ? "Rutina" : "Sigue: " + next)
+                    .putString(MediaMetadata.METADATA_KEY_ALBUM, "Rutina")
+                    .putLong(MediaMetadata.METADATA_KEY_DURATION, -1)
+                    .build());
+        } else if ("notif".equals(m)) {
+            long now = System.currentTimeMillis();
+            if (now - lastWearNotif >= 14500 || left < 1500) { lastWearNotif = now; postWear(left); }
+        }
+        h.postDelayed(tick, 1000 - (left % 1000) + 5);
+    }
+
+    private void postWear(long left) {
+        try {
+            Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CH_WEAR) : new Notification.Builder(this);
+            b.setSmallIcon(R.drawable.ic_stat)
+                    .setContentTitle("Descanso: quedan " + mmss(Math.round(left / 5000.0) * 5000))
+                    .setContentText(next.isEmpty() ? "Rutina" : "Sigue: " + next)
+                    .setOnlyAlertOnce(true)
+                    .setAutoCancel(true)
+                    .setShowWhen(false)
+                    .setColor(0xFF0B2A6B)
+                    .setCategory(Notification.CATEGORY_REMINDER)
+                    .addAction(new Notification.Action.Builder(0, "+15 s", act("add", 11)).build())
+                    .addAction(new Notification.Action.Builder(0, "Saltar", act("skip", 12)).build());
+            getSystemService(NotificationManager.class).notify(ID_WEAR, b.build());
+        } catch (Exception e) { /* sin permiso: nada */ }
+    }
+
+    private void mediaStart() {
+        try {
+            if (ms == null) {
+                ms = new MediaSession(this, "rutina-descanso");
+                ms.setCallback(new MediaSession.Callback() {
+                    @Override public void onSkipToNext() { startService(new Intent(RestService.this, RestService.class).setAction("skip")); }
+                    @Override public void onSkipToPrevious() { startService(new Intent(RestService.this, RestService.class).setAction("add")); }
+                    @Override public void onFastForward() { onSkipToNext(); }
+                    @Override public void onRewind() { onSkipToPrevious(); }
+                    @Override public void onPause() { /* no cortar el descanso por error */ }
+                    @Override public void onPlay() { }
+                });
+            }
+            ms.setPlaybackState(new PlaybackState.Builder()
+                    .setActions(PlaybackState.ACTION_SKIP_TO_NEXT | PlaybackState.ACTION_SKIP_TO_PREVIOUS | PlaybackState.ACTION_PLAY_PAUSE)
+                    .setState(PlaybackState.STATE_PLAYING, PlaybackState.PLAYBACK_POSITION_UNKNOWN, 1f)
+                    .build());
+            ms.setActive(true);
+            // audio en silencio (sin pedir el foco de audio): marca la sesión como "sonando" sin cortar tu música
+            if (silence == null) {
+                int rate = 8000, n = AudioTrack.getMinBufferSize(rate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT) * 2;
+                silence = new AudioTrack.Builder()
+                        .setAudioAttributes(new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_UNKNOWN).build())
+                        .setAudioFormat(new AudioFormat.Builder().setSampleRate(rate).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
+                        .setBufferSizeInBytes(n).setTransferMode(AudioTrack.MODE_STATIC).build();
+                silence.write(new short[n / 2], 0, n / 2);
+                silence.setLoopPoints(0, n / 2, -1);
+                silence.setVolume(0f);
+            }
+            silence.play();
+        } catch (Exception e) { /* si falla, queda el contador del celular */ }
+    }
+
+    private void wearStop() {
+        h.removeCallbacks(tick);
+        try { getSystemService(NotificationManager.class).cancel(ID_WEAR); } catch (Exception e) { /* nada */ }
+        try { if (silence != null) { silence.stop(); silence.release(); silence = null; } } catch (Exception e) { /* nada */ }
+        try {
+            if (ms != null) {
+                ms.setPlaybackState(new PlaybackState.Builder().setState(PlaybackState.STATE_STOPPED, 0, 0f).build());
+                ms.setActive(false); ms.release(); ms = null;
+            }
+        } catch (Exception e) { /* nada */ }
+    }
+
+    static String mmss(long ms) { long s = (ms + 999) / 1000; return (s / 60) + ":" + String.format(java.util.Locale.ROOT, "%02d", s % 60); }
 
     private void quit(long delay) {
         h.removeCallbacks(done);
@@ -153,6 +272,9 @@ public class RestService extends Service {
                 .addAction(new Notification.Action.Builder(0, "Saltar", act("skip", 12)).build());
         // Android 16 / One UI 8: pide mostrarse como "actualización en vivo" (la barra de abajo de la pantalla de bloqueo)
         // (lo mismo que hace NotificationCompat: el pedido va como extra)
+        if ("media".equals(wearMode(this)) && ms != null && Build.VERSION.SDK_INT >= 26) {
+            b.setStyle(new Notification.MediaStyle().setMediaSession(ms.getSessionToken()).setShowActionsInCompactView(0, 1));
+        }
         android.os.Bundle ex = new android.os.Bundle();
         ex.putBoolean("android.requestPromotedOngoing", true);
         b.addExtras(ex);
@@ -161,6 +283,7 @@ public class RestService extends Service {
 
     @Override
     public void onDestroy() {
+        wearStop();
         h.removeCallbacksAndMessages(null);
         try { if (wl != null && wl.isHeld()) wl.release(); } catch (Exception e) { /* nada */ }
         super.onDestroy();

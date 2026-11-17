@@ -146,7 +146,14 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public int version() { return 3; }
+        public int version() { return 4; }
+
+        /** Contador en la pulsera: "off", "media" o "notif". */
+        @JavascriptInterface
+        public void setWearMode(String m) { RestService.setWearMode(MainActivity.this, m == null ? "off" : m); }
+
+        @JavascriptInterface
+        public String wearMode() { return RestService.wearMode(MainActivity.this); }
 
         /** Estado de los avisos: permiso, importancia del canal y si puede programar la alarma exacta. */
         @JavascriptInterface

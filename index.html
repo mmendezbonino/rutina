@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.11.16-2";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.11.17-1";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -803,7 +803,7 @@ const IS_PWA=!!window.__PWA, APP_VERSION=window.__APP_VERSION||'';
 function backupJSON(){return JSON.stringify({app:'cuaderno-rutina',v:1,exportedAt:new Date().toISOString(),plan:S.plan,sessions:S.sessions.map(({_id,...r})=>r)})}
 // avisos de descanso en la app de Android: muestra si están bloqueados y deja probarlos
 const APK_URL='https://github.com/mmendezbonino/rutina/releases/download/apk/cuaderno-rutina.apk';
-const APK_V=3; // versión del puente Android que trae la última APK publicada
+const APK_V=4; // versión del puente Android que trae la última APK publicada
 function nativeStatus(){ if(!NATIVE) return null; try{ if(!NATIVE.version||NATIVE.version()<APK_V) return {old:true}; return JSON.parse(NATIVE.status()) }catch(e){ return {old:true} } }
 function notifProblem(st){ if(!st||st.old) return ''; if(!st.on) return 'Las notificaciones de la app están apagadas'; if(st.imp===0) return 'El canal «Fin del descanso» está bloqueado'; if(st.imp>0&&st.imp<3) return 'El aviso está configurado sin sonido'; return '' }
 function avisosSection(){ const st=nativeStatus(); if(!st) return '';
@@ -812,7 +812,13 @@ function avisosSection(){ const st=nativeStatus(); if(!st) return '';
   else { const pb=notifProblem(st);
     h+= pb ? `<p style="margin:0;font-weight:700;color:var(--rojo)">${pb}</p><p class="muted" style="margin:0;font-size:.88rem">Por eso solo suena cuando volvés a la app. Tocá abajo, activá las notificaciones y el sonido de «Fin del descanso».</p><button class="btn primary" data-act="n-set">Abrir ajustes de notificaciones</button>`
            : `<p class="muted" style="margin:0;font-size:.88rem">Los avisos están activados${st.exact?'':' (sin alarma exacta: puede llegar con unos segundos de atraso)'}. Probalo: tocá el botón, apagá la pantalla y esperá 10 segundos.</p>`;
-    h+=`<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn${pb?'':' primary'}" data-act="n-test">Probar aviso en 10 s</button>${pb?'':'<button class="btn" data-act="n-set">Ajustes</button>'}</div>`; }
+    h+=`<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn${pb?'':' primary'}" data-act="n-test">Probar aviso en 10 s</button>${pb?'':'<button class="btn" data-act="n-set">Ajustes</button>'}</div>`;
+    let wm='off'; try{wm=NATIVE.wearMode()}catch(e){}
+    const WM=[['off','Apagado'],['media','Control de música'],['notif','Notificación']];
+    h+=`<div style="border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px"><div style="font-weight:700">Contador en la pulsera o el reloj</div>
+      <div class="seg" role="radiogroup" aria-label="Contador en la pulsera" style="display:flex;gap:6px;flex-wrap:wrap">${WM.map(([k,l])=>`<button class="btn${wm===k?' primary':''}" role="radio" aria-checked="${wm===k}" data-act="wear" data-m="${k}">${l}</button>`).join('')}</div>
+      <p class="muted" style="margin:0;font-size:.85rem">${wm==='media'?'Durante el descanso, la pulsera muestra la cuenta regresiva en el control de música. ⏭ salta el descanso y ⏮ suma 15 s. Mientras dura, los botones de música controlan el descanso, no tu música.':wm==='notif'?'Durante el descanso, cada 15 s se actualiza una notificación con el tiempo que queda. Si la pulsera vibra en cada actualización, probá «Control de música».':'Para verlo en la Fit3, activá «Rutina» en Galaxy Wearable → Notificaciones. El aviso de fin de descanso llega a la pulsera igual.'}</p>
+      <button class="btn" data-act="wear-test">Probar descanso de 40 s</button></div>`; }
   return h+`</div></section>`;
 }
 function backupSection(){
@@ -905,6 +911,8 @@ document.addEventListener('click',async ev=>{
   switch(a){
     case 'tech': openTech(t.dataset.ex); break;
     case 'exhist': openExHist(t.dataset.ex); break;
+    case 'wear': try{NATIVE.setWearMode(t.dataset.m)}catch(e){} render(); break;
+    case 'wear-test': try{NATIVE.startRest(Date.now()+40000,'Prueba del contador'); toast('Descanso de prueba: mirá la pulsera')}catch(e){toast('Necesitás la app nueva')} break;
     case 'bk-copy': {const txt=backupJSON(); try{await navigator.clipboard.writeText(txt); toast('Respaldo copiado'); S.bkText=null}catch(e){S.bkText=txt; toast('Copialo desde el cuadro de abajo')} render(); break}
     case 'bk-export': {try{const b=new Blob([backupJSON()],{type:'application/json'}), u=URL.createObjectURL(b), a=document.createElement('a'); a.href=u; a.download='respaldo-rutina-'+new Date().toISOString().slice(0,10)+'.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),2000); toast('Respaldo descargado')}catch(e){toast('No se pudo descargar. Usá Copiar.')} break}
     case 'bk-import': S.bkImport=true; S.bkText=null; render(); break;
