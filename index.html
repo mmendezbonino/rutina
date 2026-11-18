@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.11.18-3";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.11.18-4";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -465,6 +465,12 @@ function lastFor(exId){
   for(const s of S.sessions){const e=(s.entries||[]).find(x=>x.exId===exId); if(e) return {s,e}}
   return null;
 }
+// la última vez que hiciste este ejercicio, en cualquier día (mismo id o mismo nombre)
+function lastAnyFor(ex){
+  const n=String(ex.name||'').trim().toLowerCase();
+  for(const s of S.sessions){const e=(s.entries||[]).find(x=>x.exId===ex.id||String(x.name||'').trim().toLowerCase()===n); if(e) return {s,e}}
+  return null;
+}
 function suggestUp(ex,last){
   if(!last||ex.type!=='fuerza') return false;
   const top=topRep(ex.reps); if(!top) return false;
@@ -638,11 +644,11 @@ function viewHoy(){
   const r=S.plan.routines[key], c=colorOf(key);
   h+=warmHTML(r,false);
   h+=`<div class="group">`+r.exercises.map((ex,i)=>{
-    const last=lastFor(ex.id);
+    const last=lastFor(ex.id), lastA=lastAnyFor(ex);
     let sub = ex.type==='cardio' ? `Cardio · ${esc(ex.reps)} min` : `${ex.sets} × ${esc(ex.reps)}${ex.weight?` · ${fmtKg(ex.weight)} kg`:''}`;
-    if(last){
-      if(ex.type==='cardio'){const cc=last.e.cardio||{}; sub+=` · última <b>${cc.min||0} min</b>`}
-      else{const best=(last.e.sets||[]).reduce((a,x)=>!a||x.w>a.w?x:a,null); if(best) sub+=` · última <b>${fmtKg(best.w)} × ${best.r}</b>`}
+    if(lastA){
+      if(ex.type==='cardio'){const cc=lastA.e.cardio||{}; sub+=` · última <b>${cc.min||0} min</b>`}
+      else{const best=(lastA.e.sets||[]).reduce((a,x)=>!a||x.w>a.w?x:a,null); if(best) sub+=` · última <b>${fmtKg(best.w)} × ${best.r}</b>`}
     }
     return `<div class="row tap" data-act="exhist" data-ex="${esc(ex.id)}" role="button" tabindex="0" aria-label="Historial de ${esc(ex.name)}"><div class="ftile" style="${tileStyle(c)}">${fig(ex,c)}<span class="fnum">${i+1}</span></div><div class="row-main"><div class="row-title">${esc(ex.name)}</div><div class="row-sub">${sub}</div>${noteHTML(ex.name)}${suggestUp(ex,last)?'<span class="badge up" style="display:inline-block;margin-top:6px">Subí peso</span>':''}</div><button class="vid" data-act="tech" data-ex="${esc(ex.id)}" aria-label="Ver técnica de ${esc(ex.name)}">${IC_PLAY}</button></div>`;
   }).join('')+`</div>`;
