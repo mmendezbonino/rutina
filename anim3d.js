@@ -72,6 +72,9 @@ const META=[
  {id:'thrust',name:'Hip thrust en máquina',main:['Glúteo'],sec:['Isquiotibiales','Cuádriceps'],lab:['Subí la cadera','Bajá controlado'],work:{glutes:1,hams:.45,quads:.3},
   cam:{yaw:90,pitch:10,dist:3.3,ty:.48,tz:.38},cue:'Espalda alta apoyada en el borde del respaldo, el pad sobre la cadera y los pies planos al ancho de los hombros.',
   steps:['Apoyá la parte baja de los omóplatos en el borde del respaldo y agarrá las manijas del pad.','Empujá con los talones y subí la cadera hasta que el torso quede en línea con los muslos, con el mentón hacia el pecho.','Apretá el glúteo un segundo arriba y bajá controlado sin llegar a apoyarte.']},
+ {id:'revcrunch',name:'Crunch inverso en banco inclinado',main:['Abdominales (parte baja)'],sec:['Oblicuos'],lab:['Llevá las rodillas al pecho','Bajá despacio'],work:{abs:1,obliques:.45,forearm:.2},
+  cam:{yaw:72,pitch:10,dist:3.6,ty:.85,tz:.0},cue:'Acostado en el banco inclinado con la cabeza arriba, agarrado del borde detrás de la cabeza.',
+  steps:['Rodillas dobladas a 90°, muslos apuntando al techo.','Enrollá la pelvis: llevá las rodillas al pecho despegando la cola del banco.','Bajá en 2–3 s hasta que la cola vuelva a apoyar, sin dejar caer las piernas.']},
  {id:'legraise',name:'Elevaciones de piernas colgado',main:['Abdominales'],sec:['Oblicuos','Flexores de cadera'],lab:['Subí las piernas','Bajá sin balancearte'],work:{abs:1,obliques:.45,quads:.25,forearm:.3},
   cam:{yaw:68,pitch:6,dist:4.6,ty:1.35,tz:.15},cue:'Colgado de la barra con agarre firme, hombros activos y sin balanceo.',
   steps:['Colgate de la barra con los brazos estirados y los hombros apenas tirados hacia abajo.','Subí las piernas casi estiradas hasta la altura de la cadera, metiendo la pelvis hacia adentro al final.','Bajá lento y controlado, sin dejar que el cuerpo se balancee.']},
@@ -97,8 +100,8 @@ const META=[
 A3.list=META;
 A3.meta=id=>META.find(m=>m.id===id)||null;
 // ids de la app → animación; si no hay, se busca por nombre
-const BY_APP={fondos:'dips',dom:'pull',remov:'row',rdelt:'rdelt',lat1:'lat',lat2:'lat',latc:'latcable',lats:'latseat',pred:'preacher',mart:'hammer',banca:'bench',incl:'incline',apert:'fly',skull:'skull',push:'pushdown',remo:'rower',hack:'hack',prensa:'press',gem:'calfpress',hiper:'hyper',hiperlat:'hyperlat',hipt:'thrust',hiptL:'thrust',femsen:'legcurl',femL:'legcurl',gemL:'calfpress',prensag:'press',ext:'legext',abdm:'abd',addm:'add',elevp:'legraise',crunch:'cablecrunch',extoh:'ohext'};
-const BY_NAME=[[/lateral.*polea|polea.*lateral/,'latcable'],[/lateral.*sentad/,'latseat'],[/sobre la cabeza|overhead|tras nuca/,'ohext'],[/crunch|encogimiento abdominal/,'cablecrunch'],[/elevaci[oó]n(es)? de piernas|leg raise|rodillas al pecho/,'legraise'],[/(gemelo|pantorr|calf).*prensa|prensa.*(gemelo|pantorr)/,'calfpress'],[/cu[aá]driceps|extensi[oó]n de pierna/,'legext'],[/femoral|isquio/,'legcurl'],[/skull|franc[eé]s|rompecr/,'skull'],[/fondo|dips|paralelas/,'dips'],[/pushdown|soga|tr[ií]ceps en polea/,'pushdown'],[/dominad|jal[oó]n|pulldown/,'pull'],[/rear delt|p[aá]jaro|deltoide post|face pull/,'rdelt'],[/remo.*(m[aá]quina.*cardio|cardio|ergo)/,'rower'],[/remo/,'row'],[/abduc/,'abd'],[/aduc/,'add'],[/hiperext.*lateral|lateral.*hiperext/,'hyperlat'],[/hip ?thrust|puente de gl/,'thrust'],[/hiperext|lumbar/,'hyper'],[/hack/,'hack'],[/prensa/,'press'],[/predicador|scott/,'preacher'],[/martillo|hammer/,'hammer'],[/lateral|elevaci/,'lat'],[/inclinad/,'incline'],[/apertura|pec ?deck|cruce/,'fly'],[/press.*banca|banca|bench/,'bench']];
+const BY_APP={fondos:'dips',dom:'pull',remov:'row',rdelt:'rdelt',lat1:'lat',lat2:'lat',latc:'latcable',lats:'latseat',pred:'preacher',mart:'hammer',banca:'bench',incl:'incline',apert:'fly',skull:'skull',push:'pushdown',remo:'rower',hack:'hack',prensa:'press',gem:'calfpress',hiper:'hyper',hiperlat:'hyperlat',hipt:'thrust',hiptL:'thrust',femsen:'legcurl',femL:'legcurl',gemL:'calfpress',prensag:'press',ext:'legext',abdm:'abd',addm:'add',elevp:'legraise',crinv:'revcrunch',crunch:'cablecrunch',extoh:'ohext'};
+const BY_NAME=[[/lateral.*polea|polea.*lateral/,'latcable'],[/lateral.*sentad/,'latseat'],[/sobre la cabeza|overhead|tras nuca/,'ohext'],[/crunch inverso|reverse crunch/,'revcrunch'],[/crunch|encogimiento abdominal/,'cablecrunch'],[/elevaci[oó]n(es)? de piernas|leg raise|rodillas al pecho/,'legraise'],[/(gemelo|pantorr|calf).*prensa|prensa.*(gemelo|pantorr)/,'calfpress'],[/cu[aá]driceps|extensi[oó]n de pierna/,'legext'],[/femoral|isquio/,'legcurl'],[/skull|franc[eé]s|rompecr/,'skull'],[/fondo|dips|paralelas/,'dips'],[/pushdown|soga|tr[ií]ceps en polea/,'pushdown'],[/dominad|jal[oó]n|pulldown/,'pull'],[/rear delt|p[aá]jaro|deltoide post|face pull/,'rdelt'],[/remo.*(m[aá]quina.*cardio|cardio|ergo)/,'rower'],[/remo/,'row'],[/abduc/,'abd'],[/aduc/,'add'],[/hiperext.*lateral|lateral.*hiperext/,'hyperlat'],[/hip ?thrust|puente de gl/,'thrust'],[/hiperext|lumbar/,'hyper'],[/hack/,'hack'],[/prensa/,'press'],[/predicador|scott/,'preacher'],[/martillo|hammer/,'hammer'],[/lateral|elevaci/,'lat'],[/inclinad/,'incline'],[/apertura|pec ?deck|cruce/,'fly'],[/press.*banca|banca|bench/,'bench']];
 A3.match=ex=>{
   if(!ex) return null;
   if(ex.type==='cardio' && /remo/i.test(ex.name||'')) return 'rower';
@@ -617,6 +620,23 @@ thrust:{
  dyn(J,D){const T0=P.thrust, hp=J.hp, U=J.f.U; B.seg(D.rol,at(hp,X,-.27),at(hp,X,.27));
    [['L',1],['R',-1]].forEach(([k,s])=>{const e=at(hp,X,s*T0.lx); B.seg(D['lv'+k],V(s*T0.lx,T0.C.y,T0.C.z),e); B.seg(D['st'+k],at(hp,X,s*.25),e);
      B.seg(D['hg'+k],at(hp,X,s*T0.lx,U,.1),at(hp,X,s*(T0.lx+.15),U,.1))})}},
+revcrunch:{
+ // banco inclinado 22°, cabeza arriba; la parte alta de la espalda queda apoyada y la pelvis se enrolla hacia el pecho
+ ax(){const a=rad(22); return {Ub:V(0,Math.sin(a),-Math.cos(a)),Fb:V(0,Math.cos(a),Math.sin(a)),P0:V(0,.6,.3).addScaledVector(V(0,Math.cos(rad(22)),Math.sin(rad(22))),.022)}},
+ build(){const {Ub,Fb,P0}=P.revcrunch.ax(), c=at(P0,Ub,.42,Fb,-.135);
+   B.obox([.34,1.3,.07],c,[X,Ub,Fb],'pad');
+   const top=at(P0,Ub,DIM.sh.u+.3,Fb,-.09); B.cyl(at(top,X,-.2),at(top,X,.2),.018,'metal');
+   const lo=at(c,Ub,-.6,Fb,-.05), hi=at(c,Ub,.6,Fb,-.05); B.cyl(lo,V(0,0,lo.z),.035,'metal'); B.cyl(hi,V(0,0,hi.z),.035,'metal');
+   B.box([.5,.04,1.4],V(0,.02,(lo.z+hi.z)/2),'mach')},
+ pose(p){const {Ub,Fb,P0}=P.revcrunch.ax(), q=smooth(0,1,p), t=rad(lerp(0,24,q));
+   const S0=at(P0,Ub,DIM.sh.u), U=at(V(0,0,0),Ub,Math.cos(t),Fb,-Math.sin(t)).normalize(), F=at(V(0,0,0),Ub,Math.sin(t),Fb,Math.cos(t)).normalize();
+   const f=frame(at(S0,U,-DIM.sh.u),U,F);
+   const top=at(P0,Ub,DIM.sh.u+.3,Fb,-.09);
+   const arms=[1,-1].map(s=>arm(f,s,at(top,X,s*.15,Fb,.02),at(V(0,0,0),X,s,Fb,.5,Ub,-.2)));
+   const hf=rad(lerp(78,118,q)), kn=rad(lerp(84,122,q));
+   const legs=[1,-1].map(s=>{const td=at(V(0,0,0),f.U,-Math.cos(hf),f.F,Math.sin(hf),f.L,-s*.04).normalize(), k=at(f.hip(s),td,LEN.th);
+     const sd=at(V(0,0,0),f.U,-Math.cos(hf-kn),f.F,Math.sin(hf-kn)).normalize(); return {h:f.hip(s),k,a:at(k,sd,LEN.sh),sd}});
+   return {f,arms,legs,toes:legs.map(l=>at(l.a,l.sd,.12,f.F,.02))}}},
 legraise:{
  build(){P.pull.build()},
  // colgado; las piernas juntas suben hasta la cadera con las rodillas apenas flexionadas, la pelvis se mete al final y los pies van en punta
@@ -706,6 +726,7 @@ const LIFE={
  hyper:{tempo:[1.2,.8,2,.3],life:p=>({sp:{f:lerp(9,0,p)},head:{p:lerp(-6,-2,p)},sway:0})},
  hyperlat:{tempo:[1.1,.6,1.9,.3],life:p=>({sp:{l:lerp(-10,0,p)},head:{p:-2},sway:0})},
  thrust:{tempo:[1,.9,1.8,.3],life:p=>({sp:{f:lerp(4,-1,p)},head:{p:lerp(18,30,p)},scap:{e:0,p:-3},sway:0})},
+ revcrunch:{tempo:[1,.5,2.2,.4],life:p=>({sp:{f:lerp(0,12,p)},head:{p:lerp(6,14,p)},stab:.3,sway:0})},
  legraise:{tempo:[1.1,.5,1.9,.5],life:p=>({sp:{f:lerp(0,14,p)},head:{p:lerp(0,10,p)},scap:{e:-4},stab:.2,sway:0})},
  cablecrunch:{tempo:[1,.6,1.8,.3],life:p=>({sp:{f:lerp(2,24,p)},head:{p:lerp(4,10,p)},stab:0,sway:0})},
  ohext:{tempo:[.9,.5,2,.4],life:p=>({sp:{f:lerp(0,-4,p)},head:{p:lerp(10,4,p)},scap:{e:lerp(8,12,p)},stab:.6,sway:.3})},
