@@ -28,11 +28,22 @@ public class MainActivity extends Activity {
     static final String HOST = "mmendezbonino.github.io";
     private WebView web;
     private ValueCallback<Uri[]> fileCb;
+    private Health health;
+
+    /** Manda una respuesta de Health Connect a la página. */
+    void hcReply(final String id, final String json) {
+        runOnUiThread(() -> {
+            if (web == null) return;
+            String js = "window.__hcCb&&window.__hcCb(" + org.json.JSONObject.quote(id) + "," + json + ")";
+            web.evaluateJavascript(js, null);
+        });
+    }
 
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
         Notif.channel(this);
+        health = new Health(this, this::hcReply);
         web = new WebView(this);
         web.setBackgroundColor(0xFFF4F6FA);
         if (Build.VERSION.SDK_INT >= 35) {
@@ -108,6 +119,12 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    public void onRequestPermissionsResult(int req, String[] perms, int[] res) {
+        super.onRequestPermissionsResult(req, perms, res);
+        if (req == Health.REQ) hcReply("perm", health.status());
+    }
+
+    @Override
     protected void onSaveInstanceState(Bundle out) {
         super.onSaveInstanceState(out);
         web.saveState(out);
@@ -146,7 +163,7 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public int version() { return 4; }
+        public int version() { return 5; }
 
         /** Contador en la pulsera: "off", "media" o "notif". */
         @JavascriptInterface
@@ -154,6 +171,30 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public String wearMode() { return RestService.wearMode(MainActivity.this); }
+
+        // ---------- Samsung Health / Health Connect ----------
+        @JavascriptInterface
+        public String hcStatus() { return health.status(); }
+
+        @JavascriptInterface
+        public void hcConnect() { runOnUiThread(() -> health.request()); }
+
+        @JavascriptInterface
+        public void hcRead(String id, String kind, double from, double to) { health.query(id, kind, (long) from, (long) to); }
+
+        @JavascriptInterface
+        public void hcWrite(String id, String clientId, double start, double end, String title, String notes) {
+            health.writeSession(id, clientId, (long) start, (long) end, title, notes);
+        }
+
+        /** Abre los ajustes de Health Connect (para revisar permisos o qué apps comparten datos). */
+        @JavascriptInterface
+        public void hcSettings() {
+            runOnUiThread(() -> {
+                try { startActivity(new Intent("android.health.connect.action.HEALTH_HOME_SETTINGS")); }
+                catch (Exception e) { try { startActivity(new Intent("android.health.connect.action.MANAGE_HEALTH_PERMISSIONS").putExtra(Intent.EXTRA_PACKAGE_NAME, getPackageName())); } catch (Exception x) { /* nada */ } }
+            });
+        }
 
         /** Estado de los avisos: permiso, importancia del canal y si puede programar la alarma exacta. */
         @JavascriptInterface
