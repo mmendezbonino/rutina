@@ -180,9 +180,9 @@ final class Health {
         if (!available() || !has("WRITE_EXERCISE")) { fail(id, new Exception("sin permiso")); return; }
         try {
             HealthConnectManager hcm = act.getSystemService(HealthConnectManager.class);
-            Metadata md = new Metadata.Builder().setClientRecordId(clientId).setClientRecordVersion(1).build();
+            Metadata md = new Metadata.Builder().setClientRecordId(clientId).setClientRecordVersion(2).build();
             ExerciseSessionRecord.Builder b = new ExerciseSessionRecord.Builder(md, Instant.ofEpochMilli(start), Instant.ofEpochMilli(end),
-                    ExerciseSessionType.EXERCISE_SESSION_TYPE_STRENGTH_TRAINING);
+                    ExerciseSessionType.EXERCISE_SESSION_TYPE_WEIGHTLIFTING); // Samsung Health muestra «fuerza» como «Other workout»
             b.setTitle(title);
             if (notes != null && !notes.isEmpty()) b.setNotes(notes);
             java.time.ZoneOffset off = ZoneId.systemDefault().getRules().getOffset(Instant.ofEpochMilli(start));

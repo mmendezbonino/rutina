@@ -163,7 +163,7 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public int version() { return 5; }
+        public int version() { return 6; }
 
         /** Contador en la pulsera: "off", "media" o "notif". */
         @JavascriptInterface
