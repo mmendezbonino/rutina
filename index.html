@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.11.18-4";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.11.18-5";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -461,8 +461,11 @@ const tileStyle = c => `background:color-mix(in srgb,${c} 16%,transparent);color
 const volOf = s => s.entries.reduce((b,e)=>b+(e.sets||[]).reduce((c,x)=>c+x.w*x.r,0),0);
 const fmtVol = v => v>=10000? (Math.round(v/100)/10).toString().replace('.',',')+' t' : Math.round(v).toLocaleString('es-UY')+' kg';
 
+// última vez de este ejercicio en un día que hoy lo tiene (miércoles y sábado van por separado;
+// lunes y jueves, que repiten ejercicios, se continúan entre sí)
 function lastFor(exId){
-  for(const s of S.sessions){const e=(s.entries||[]).find(x=>x.exId===exId); if(e) return {s,e}}
+  const days=new Set(Object.entries(S.plan.routines).filter(([k,r])=>r.exercises.some(e=>e.id===exId)).map(([k])=>k));
+  for(const s of S.sessions){ if(s.routine&&days.size&&!days.has(s.routine)) continue; const e=(s.entries||[]).find(x=>x.exId===exId); if(e) return {s,e} }
   return null;
 }
 // la última vez que hiciste este ejercicio, en cualquier día (mismo id o mismo nombre)
@@ -644,7 +647,7 @@ function viewHoy(){
   const r=S.plan.routines[key], c=colorOf(key);
   h+=warmHTML(r,false);
   h+=`<div class="group">`+r.exercises.map((ex,i)=>{
-    const last=lastFor(ex.id), lastA=lastAnyFor(ex);
+    const last=lastFor(ex.id), lastA=last;
     let sub = ex.type==='cardio' ? `Cardio · ${esc(ex.reps)} min` : `${ex.sets} × ${esc(ex.reps)}${ex.weight?` · ${fmtKg(ex.weight)} kg`:''}`;
     if(lastA){
       if(ex.type==='cardio'){const cc=lastA.e.cardio||{}; sub+=` · última <b>${cc.min||0} min</b>`}
