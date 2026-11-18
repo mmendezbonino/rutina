@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.11.17-1";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.11.18-1";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -490,14 +490,15 @@ async function finishWorkout(){
   const w=S.workout; const now=Date.now();
   const entries=w.entries.map(e=>e.type==='cardio'
     ? {exId:e.exId,name:e.name,type:'cardio',cardio:{min:+e.cardio.min||0,dist:+String(e.cardio.dist).replace(',','.')||0,level:+e.cardio.level||0}}
-    : {exId:e.exId,name:e.name,type:'fuerza',sets:e.sets.filter(s=>s.done||s.r!=='').map(s=>({w:+String(s.w).replace(',','.')||0,r:+s.r||0,done:!!s.done}))}
+    : {exId:e.exId,name:e.name,type:'fuerza',sets:e.sets.filter(s=>s.done||s.r!=='').map(s=>{const o={w:+String(s.w).replace(',','.')||0,r:+s.r||0,done:!!s.done}; if(s.t) o.t=s.t; return o})}
   ).filter(e=>e.type==='cardio'? e.cardio.min>0 : e.sets.length>0);
   if(!entries.length){toast('Marcá al menos una serie'); S.confirmFinish=false; render(); return}
-  const sess={id:w.id,date:new Date(w.started).toISOString(),routine:w.key,name:w.name,minutes:Math.round((now-w.started)/60000),entries};
+  const sess={id:w.id,date:new Date(w.started).toISOString(),start:w.started,end:now,routine:w.key,name:w.name,minutes:Math.round((now-w.started)/60000),entries};
   try{ await S.store.savePlan(S.plan); await S.store.addSession(sess); }
   catch(e){toast('No se pudo guardar. Probá de nuevo.'); return}
   S.sessions.unshift(sess); S.workout=null; S.confirmFinish=false; stopTimer(); stopClock(); saveDraft();
   toast('Entrenamiento guardado'); render(); window.scrollTo(0,0);
+  hcSaveSession(sess);
 }
 
 // ---------- clocks ----------
@@ -702,12 +703,13 @@ function viewHist(){
   Object.values(S.plan.routines).forEach(r=>r.exercises.forEach(e=>{if(e.type==='fuerza') addEx(e.id,e.name)}));
   S.sessions.forEach(s=>s.entries.forEach(e=>{if(e.type==='fuerza') addEx(e.exId,e.name)}));
   const selEx=exs.find(e=>e.ids.includes(S.progEx))||exs[0], sel=selEx&&selEx.id;
+  h+=hcBodyHTML();
   h+=`<section class="section"><div class="section-h"><h2>Por ejercicio</h2></div><div class="card"><div class="field"><label for="progsel">Ejercicio</label><select id="progsel" data-act="prog">${exs.map(e=>`<option value="${esc(e.id)}" ${e.id===sel?'selected':''}>${esc(e.name)}</option>`).join('')}</select></div>${chart(sel,selEx?selEx.ids:[sel])}</div></section>`;
   h+=`<section class="section"><div class="section-h"><h2>Historial</h2><span>${S.sessions.length} sesiones</span></div><div class="group">`+S.sessions.map(s=>{
     const open=S.openSess===s.id, c=colorOf(s.routine);
     let body='';
     if(open){
-      body=`<div class="detail">`+s.entries.map(e=>`<div><div class="t">${esc(e.name)}</div><div class="s">${e.type==='cardio'?`${e.cardio.min} min${e.cardio.dist?` · ${fmtKg(e.cardio.dist)} km`:''}${e.cardio.level?` · damper ${e.cardio.level}`:''}`:e.sets.map(x=>`${fmtKg(x.w)} × ${x.r}`).join(' &nbsp;·&nbsp; ')}</div></div>`).join('')+
+      body=`<div class="detail">`+hcSessHTML(s)+s.entries.map(e=>`<div><div class="t">${esc(e.name)}${(m=>m?` <span style="color:var(--rojo);font-weight:600;font-size:.8rem">♥ ${m}</span>`:'')(hcExMax(s,e))}</div><div class="s">${e.type==='cardio'?`${e.cardio.min} min${e.cardio.dist?` · ${fmtKg(e.cardio.dist)} km`:''}${e.cardio.level?` · damper ${e.cardio.level}`:''}`:e.sets.map(x=>`${fmtKg(x.w)} × ${x.r}`).join(' &nbsp;·&nbsp; ')}</div></div>`).join('')+
       (S.confirmDel===s.id?`<div class="confirm"><span style="flex:1">¿Borrar esta sesión?</span><button class="btn sm danger" data-act="del2" data-id="${s.id}">Borrar</button><button class="btn sm" data-act="delno">Cancelar</button></div>`:`<button class="btn sm text danger" style="align-self:flex-start;padding:0" data-act="del" data-id="${s.id}">Borrar sesión</button>`)+`</div>`;
     }
     return `<div><button class="row" data-act="opens" data-id="${s.id}" aria-expanded="${open}"><div class="tile" style="${tileStyle(c)}"><span class="dot" style="background:${c};width:10px;height:10px"></span></div><div class="row-main"><div class="row-title">${esc(s.name)}</div><div class="row-sub">${fmtDate(s.date)} · ${s.minutes} min · ${fmtVol(volOf(s))}</div></div><span class="chev">${open?IC.chevd:IC.chev}</span></button>${body}</div>`;
@@ -784,6 +786,7 @@ function viewRut(){
   h+=`<div style="display:flex;gap:8px"><button class="btn primary" style="flex:1" data-act="esave">Guardar cambios</button><button class="btn" data-act="ereset">Descartar</button></div>`;
   h+=`<section class="section"><div class="section-h"><h2>Semana</h2></div><div class="group sched">${[1,2,3,4,5,6,0].map(dw=>`<div class="row"><label class="row-main row-title" for="sch-${dw}">${DAYNAMES[dw]}</label><select id="sch-${dw}" data-act="sched" data-d="${dw}"><option value="">Descanso</option>${keys.map(k=>`<option value="${k}" ${S.plan.schedule[dw]===k?'selected':''}>${esc(S.plan.routines[k].name)}</option>`).join('')}</select></div>`).join('')}</div></section>`;
   h+=avisosSection();
+  h+=hcSection();
   h+=backupSection();
   return h;
 }
@@ -803,9 +806,89 @@ const IS_PWA=!!window.__PWA, APP_VERSION=window.__APP_VERSION||'';
 function backupJSON(){return JSON.stringify({app:'cuaderno-rutina',v:1,exportedAt:new Date().toISOString(),plan:S.plan,sessions:S.sessions.map(({_id,...r})=>r)})}
 // avisos de descanso en la app de Android: muestra si están bloqueados y deja probarlos
 const APK_URL='https://github.com/mmendezbonino/rutina/releases/download/apk/cuaderno-rutina.apk';
-const APK_V=4; // versión del puente Android que trae la última APK publicada
+const APK_V=5; // versión del puente Android que trae la última APK publicada
 function nativeStatus(){ if(!NATIVE) return null; try{ if(!NATIVE.version||NATIVE.version()<APK_V) return {old:true}; return JSON.parse(NATIVE.status()) }catch(e){ return {old:true} } }
 function notifProblem(st){ if(!st||st.old) return ''; if(!st.on) return 'Las notificaciones de la app están apagadas'; if(st.imp===0) return 'El canal «Fin del descanso» está bloqueado'; if(st.imp>0&&st.imp<3) return 'El aviso está configurado sin sonido'; return '' }
+// ---------- Samsung Health (Health Connect, desde la app de Android) ----------
+const HC={cbs:{},n:0,sess:{},loading:{},body:null,bodyAt:0};
+window.__hcCb=(id,res)=>{ if(id==='perm'){ render(); if(hcHas('WRITE_EXERCISE')&&S.plan.hcWrite!==false&&!S.plan.hcSynced) hcSyncAll(true); return } const f=HC.cbs[id]; if(f){ delete HC.cbs[id]; f(res) } };
+function hcOK(){ try{ return !!(NATIVE&&NATIVE.version&&NATIVE.version()>=5) }catch(e){ return false } }
+function hcStatus(){ if(!hcOK()) return null; try{ return JSON.parse(NATIVE.hcStatus()) }catch(e){ return {avail:false,granted:[]} } }
+function hcHas(p){ const st=hcStatus(); return !!(st&&st.avail&&st.granted.includes(p)) }
+function hcCall(fn){ return new Promise(res=>{ const id='r'+(++HC.n); HC.cbs[id]=res; try{ fn(id) }catch(e){ delete HC.cbs[id]; res({error:String(e)}) } setTimeout(()=>{ if(HC.cbs[id]){ delete HC.cbs[id]; res({error:'timeout'}) } },20000) }) }
+async function hcRead(kind,from,to){ if(!hcOK()) return null; const r=await hcCall(id=>NATIVE.hcRead(id,kind,from,to)); return r&&r.data||null }
+function sessTimes(s){ const a=s.start||new Date(s.date).getTime(); return [a, s.end||a+Math.max(1,s.minutes||60)*60000] }
+async function hcSaveSession(s){
+  if(!hcHas('WRITE_EXERCISE')||S.plan.hcWrite===false) return false;
+  const [a,b]=sessTimes(s), sets=s.entries.reduce((n,e)=>n+(e.sets?e.sets.length:0),0);
+  const notes=`${s.entries.length} ejercicios · ${sets} series · ${fmtVol(volOf(s))}\n`+s.entries.map(e=>e.type==='cardio'?`${e.name}: ${e.cardio.min} min`:`${e.name}: ${e.sets.map(x=>`${x.w?fmtKg(x.w)+'×':''}${x.r}`).join(', ')}`).join('\n');
+  const r=await hcCall(id=>NATIVE.hcWrite(id,'rutina-'+s.id,a,b,s.name,notes)); return !!(r&&r.ok)
+}
+async function hcSyncAll(quiet){ let ok=0; for(const s of S.sessions){ if(await hcSaveSession(s)) ok++ } S.plan.hcSynced=true; try{await S.store.savePlan(S.plan)}catch(e){} if(!quiet||ok) toast(ok?(ok===1?'Entrenamiento guardado en Samsung Health':`${ok} entrenamientos guardados en Samsung Health`):'No se pudo guardar en Samsung Health'); render() }
+// pulso y calorías de una sesión (se piden una vez y quedan en memoria)
+function hcLoadSess(s){
+  if(HC.sess[s.id]||HC.loading[s.id]||!hcHas('READ_HEART_RATE')) return; HC.loading[s.id]=true;
+  const [a,b]=sessTimes(s);
+  Promise.all([hcRead('hr',a-60000,b+120000), hcHas('READ_ACTIVE_CALORIES_BURNED')?hcRead('acal',a,b):null, hcHas('READ_TOTAL_CALORIES_BURNED')?hcRead('tcal',a,b):null]).then(([hr,ac,tc])=>{
+    const kc=arr=>arr&&arr.length?Math.round(arr.reduce((t,[x,y,k])=>{const ov=Math.max(0,Math.min(y,b)-Math.max(x,a)), d=Math.max(1,y-x); return t+k*Math.min(1,ov/d)},0)):null;
+    const pts=(hr||[]).sort((p,q)=>p[0]-q[0]);
+    HC.sess[s.id]={pts, avg:pts.length?Math.round(pts.reduce((t,p)=>t+p[1],0)/pts.length):null, max:pts.length?Math.max(...pts.map(p=>p[1])):null, kcal:kc(ac)||kc(tc), a, b};
+    delete HC.loading[s.id]; if(S.tab==='hist'&&S.openSess===s.id) render();
+  });
+}
+function hcExMax(s,e){ const d=HC.sess[s.id]; if(!d||!d.pts.length||!e.sets) return null; const ts=e.sets.map(x=>x.t).filter(Boolean); if(!ts.length) return null;
+  const lo=Math.min(...ts)-150000, hi=Math.max(...ts)+30000, v=d.pts.filter(p=>p[0]>=lo&&p[0]<=hi).map(p=>p[1]); return v.length?Math.max(...v):null }
+function hcSessHTML(s){
+  if(!hcHas('READ_HEART_RATE')) return '';
+  const d=HC.sess[s.id]; if(!d){ hcLoadSess(s); return `<div class="muted" style="font-size:.85rem">♥ Buscando pulso en Samsung Health…</div>` }
+  if(!d.pts.length&&!d.kcal) return `<div class="muted" style="font-size:.85rem">♥ No hay pulso de la pulsera para este entrenamiento.</div>`;
+  let h=`<div class="hstats">${d.avg?`<div><b>${d.avg}</b><span>Pulso promedio</span></div><div><b>${d.max}</b><span>Pulso máximo</span></div>`:''}${d.kcal?`<div><b>${d.kcal}</b><span>kcal activas</span></div>`:''}</div>`;
+  if(d.pts.length>2){ const W=320,H=70,lo=Math.min(...d.pts.map(p=>p[1]))-5,hi=Math.max(...d.pts.map(p=>p[1]))+5, x=t=>(t-d.a)/(d.b-d.a+120000)*W, y=v=>H-(v-lo)/(hi-lo)*H;
+    h+=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:70px;display:block" role="img" aria-label="Pulso durante el entrenamiento"><path d="${d.pts.map((p,i)=>`${i?'L':'M'}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--rojo)" stroke-width="2" stroke-linejoin="round"/></svg>` }
+  return h;
+}
+// peso y grasa desde Samsung Health para Progreso
+function hcLoadBody(){
+  if(!(hcHas('READ_WEIGHT')||hcHas('READ_BODY_FAT'))||HC.bodyLoading||(HC.body&&Date.now()-HC.bodyAt<600000)) return; HC.bodyLoading=true;
+  const to=Date.now(), from=to-400*864e5;
+  Promise.all([hcHas('READ_WEIGHT')?hcRead('weight',from,to):null, hcHas('READ_BODY_FAT')?hcRead('fat',from,to):null]).then(([w,f])=>{
+    HC.body={w:(w||[]).sort((a,b)=>a[0]-b[0]), f:(f||[]).sort((a,b)=>a[0]-b[0])}; HC.bodyAt=Date.now(); HC.bodyLoading=false; const lw=HC.body.w.length&&HC.body.w[HC.body.w.length-1][1]; if(lw&&Math.abs((S.plan.bodyKg||0)-lw)>=.1){ S.plan.bodyKg=Math.round(lw*10)/10; S.store.savePlan(S.plan).catch(()=>{}) } if(S.tab==='hist') render() });
+}
+function miniLine(pts,unit,dec){ if(!pts.length) return '';
+  const W=320,H=110,pl=34,pr=10,pt=10,pb=20, vs=pts.map(p=>p[1]); let lo=Math.min(...vs),hi=Math.max(...vs); if(hi-lo<1){lo-=.5;hi+=.5}
+  const t0=pts[0][0], t1=pts[pts.length-1][0]||t0+1, x=t=>pts.length===1?(pl+(W-pl-pr)/2):pl+(t-t0)/(t1-t0)*(W-pl-pr), y=v=>pt+(hi-v)*(H-pt-pb)/(hi-lo);
+  const f=v=>v.toFixed(dec).replace('.',','), last=pts[pts.length-1][1], first=pts[0][1], diff=last-first;
+  return `<div class="kv" style="display:flex;gap:16px;margin-bottom:6px"><div><b style="font-size:1.25rem">${f(last)} ${unit}</b> <span class="muted" style="font-size:.8rem">último</span></div><div><b class="${diff<0?'up':''}">${diff>0?'+':''}${f(diff)} ${unit}</b> <span class="muted" style="font-size:.8rem">desde ${new Date(t0).toLocaleDateString('es-UY',{day:'numeric',month:'short'})}</span></div></div>
+  <svg viewBox="0 0 ${W} ${H}" style="width:100%;display:block;font-size:10px;fill:var(--fg-2)">${[hi,lo].map(v=>`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${pl-5}" y="${y(v)+3}" text-anchor="end">${f(v)}</text>`).join('')}
+  <path d="${pts.map((p,i)=>`${i?'L':'M'}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--azul)" stroke-width="2.2" stroke-linejoin="round"/>${pts.map(p=>`<circle cx="${x(p[0]).toFixed(1)}" cy="${y(p[1]).toFixed(1)}" r="2.6" fill="var(--azul)"/>`).join('')}</svg>` }
+function hcBodyHTML(){
+  if(!(hcHas('READ_WEIGHT')||hcHas('READ_BODY_FAT'))) return '';
+  hcLoadBody(); const b=HC.body;
+  let h=`<section class="section"><div class="section-h"><h2>Cuerpo</h2><span>Samsung Health</span></div><div class="card" style="gap:14px">`;
+  if(!b) h+=`<div class="muted" style="font-size:.9rem">Cargando peso y grasa…</div>`;
+  else if(!b.w.length&&!b.f.length) h+=`<div class="muted" style="font-size:.9rem">Samsung Health todavía no tiene peso ni grasa corporal. Si tu balanza tiene app, fijate si puede mandar las mediciones a Samsung Health o a Health Connect.</div>`;
+  else { if(b.w.length) h+=`<div><div style="font-weight:700;margin-bottom:4px">Peso</div>${miniLine(b.w,'kg',1)}</div>`; if(b.f.length) h+=`<div><div style="font-weight:700;margin-bottom:4px">Grasa corporal</div>${miniLine(b.f,'%',1)}</div>` }
+  return h+`</div></section>`;
+}
+function hcSection(){
+  if(!NATIVE) return '';
+  let h=`<section class="section"><div class="section-h"><h2>Samsung Health</h2></div><div class="card" style="gap:12px">`;
+  const st=hcStatus();
+  if(!st) return h+`<p class="muted" style="margin:0;font-size:.88rem">Para conectar con Samsung Health necesitás la app de Android nueva (arriba, en «Aviso de descanso»).</p></div></section>`;
+  if(!st.avail) return h+`<p class="muted" style="margin:0;font-size:.88rem">Tu celular no tiene Health Connect integrado (hace falta Android 14 o más nuevo).</p></div></section>`;
+  const g=st.granted, L={READ_HEART_RATE:'Pulso',READ_ACTIVE_CALORIES_BURNED:'Calorías activas',READ_TOTAL_CALORIES_BURNED:'Calorías totales',READ_EXERCISE:'Ejercicios',WRITE_EXERCISE:'Guardar entrenamientos',READ_WEIGHT:'Peso',READ_BODY_FAT:'Grasa corporal',READ_SLEEP:'Sueño'};
+  if(!g.length){
+    h+=`<p class="muted" style="margin:0;font-size:.88rem">Conectá la app con Health Connect, que es donde Samsung Health guarda los datos de la Fit3. Vas a ver tu pulso y calorías en cada entrenamiento, el peso y la grasa en Progreso, y tus entrenamientos se guardan en Samsung Health.</p>
+    <button class="btn primary" data-act="hc-connect">Conectar con Samsung Health</button>
+    <p class="muted" style="margin:0;font-size:.82rem">En la pantalla que se abre, tocá «Permitir todo». Después, en Samsung Health → Ajustes → Health Connect, fijate que comparta tus datos.</p>`;
+  } else {
+    h+=`<div style="display:flex;flex-wrap:wrap;gap:6px">${Object.keys(L).map(k=>`<span class="pill" style="font-size:.8rem;padding:4px 10px;border-radius:999px;background:${g.includes(k)?'var(--surface-2)':'transparent'};border:1px solid var(--line);color:${g.includes(k)?'var(--fg)':'var(--fg-2)'}">${g.includes(k)?'✓':'✕'} ${L[k]}</span>`).join('')}</div>`;
+    if(g.includes('WRITE_EXERCISE')) h+=`<label style="display:flex;gap:10px;align-items:center;font-weight:600"><input type="checkbox" data-act="hc-write" ${S.plan.hcWrite!==false?'checked':''} style="width:20px;height:20px"> Guardar mis entrenamientos en Samsung Health</label>`;
+    h+=`<div style="display:flex;gap:8px;flex-wrap:wrap">${g.length<st.total?'<button class="btn primary" data-act="hc-connect">Dar los permisos que faltan</button>':''}${g.includes('WRITE_EXERCISE')&&S.sessions.length?`<button class="btn" data-act="hc-sync">${S.sessions.length===1?'Pasar el entrenamiento':`Pasar los ${S.sessions.length} entrenamientos`}</button>`:''}<button class="btn" data-act="hc-settings">Ajustes de Health Connect</button></div>
+    <p class="muted" style="margin:0;font-size:.82rem">Para que el pulso sea preciso, en la Fit3 arrancá el ejercicio «Pesas» al empezar, o poné el pulso en «Medir continuamente» (Galaxy Wearable → Band settings → Health).</p>`;
+  }
+  return h+`</div></section>`;
+}
 function avisosSection(){ const st=nativeStatus(); if(!st) return '';
   let h=`<section class="section"><div class="section-h"><h2>Aviso de descanso</h2></div><div class="card" style="gap:12px">`;
   if(st.old) h+=`<p class="muted" style="margin:0;font-size:.9rem">Hay una versión nueva de la app de Android: el descanso aparece con su cuenta regresiva en la pantalla de bloqueo y el pitido suena en hora con la pantalla apagada. Bajala e instalala encima (no se borra nada).</p><a class="btn primary" href="${APK_URL}">Bajar la app nueva</a>`;
@@ -912,6 +995,10 @@ document.addEventListener('click',async ev=>{
     case 'tech': openTech(t.dataset.ex); break;
     case 'exhist': openExHist(t.dataset.ex); break;
     case 'wear': try{NATIVE.setWearMode(t.dataset.m)}catch(e){} render(); break;
+    case 'hc-connect': try{NATIVE.hcConnect()}catch(e){toast('Necesitás la app nueva')} break;
+    case 'hc-settings': try{NATIVE.hcSettings()}catch(e){} break;
+    case 'hc-sync': toast('Guardando en Samsung Health…'); hcSyncAll(false); break;
+    case 'hc-write': S.plan.hcWrite=t.checked; try{await S.store.savePlan(S.plan)}catch(e){} break;
     case 'wear-test': try{NATIVE.startRest(Date.now()+40000,'Prueba del contador'); toast('Descanso de prueba: mirá la pulsera')}catch(e){toast('Necesitás la app nueva')} break;
     case 'bk-copy': {const txt=backupJSON(); try{await navigator.clipboard.writeText(txt); toast('Respaldo copiado'); S.bkText=null}catch(e){S.bkText=txt; toast('Copialo desde el cuadro de abajo')} render(); break}
     case 'bk-export': {try{const b=new Blob([backupJSON()],{type:'application/json'}), u=URL.createObjectURL(b), a=document.createElement('a'); a.href=u; a.download='respaldo-rutina-'+new Date().toISOString().slice(0,10)+'.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(u),2000); toast('Respaldo descargado')}catch(e){toast('No se pudo descargar. Usá Copiar.')} break}
@@ -922,7 +1009,7 @@ document.addEventListener('click',async ev=>{
       if(S.pickDow===today&&!S.pick){ S.pickDow=null; navClose('pick') } else if(!was&&(S.pickDow!=null||S.pick)) navPush('pick',()=>{S.pick=null; S.pickDow=null; render()});
       render(); break }
     case 'start': startWorkout(t.dataset.k); window.scrollTo(0,0); break;
-    case 'set': {const s=W.entries[ei].sets[si]; s.done=!s.done; if(s.done&&s.r==='') s.r=s.ph||''; saveDraft(); render();
+    case 'set': {const s=W.entries[ei].sets[si]; s.done=!s.done; if(s.done) s.t=Date.now(); else delete s.t; if(s.done&&s.r==='') s.r=s.ph||''; saveDraft(); render();
       if(s.done){const ex=(S.plan.routines[W.key].exercises.find(x=>x.id===W.entries[ei].exId)||{rest:90}); startTimer(ex.rest)} break}
     case 'addset': {const ss=W.entries[ei].sets, l=ss[ss.length-1]; ss.push({w:l?l.w:'',r:'',done:false,ph:l?l.ph:'',prev:''}); saveDraft(); render(); break}
     case 'rmset': W.entries[ei].sets.pop(); saveDraft(); render(); break;
