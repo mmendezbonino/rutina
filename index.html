@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.11.18-1";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.11.18-2";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -88,6 +88,10 @@ button:disabled{opacity:.35;cursor:default}
 .row-title{font-weight:600;font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .row-sub{font-size:.83rem;color:var(--fg-2);margin-top:2px}
 .row-sub b{color:var(--fg);font-weight:600}
+.row-note{font-size:.8rem;color:var(--fg);margin-top:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}
+.row-note::before{content:"✎ ";color:var(--rojo);font-weight:700}
+.note-ed{width:100%;min-height:76px;resize:vertical;border:1px solid var(--line);border-radius:14px;padding:10px 12px;font:inherit;font-size:.92rem;background:var(--surface);color:var(--fg);box-sizing:border-box}
+.note-btn{background:none;border:0;padding:4px 0;color:var(--azul);font:inherit;font-size:.85rem;font-weight:600;cursor:pointer;text-align:left}
 .badge{font-size:.72rem;font-weight:700;padding:4px 8px;border-radius:999px;white-space:nowrap;flex:none}
 .badge.up{background:var(--ok-soft);color:var(--ok)}
 .chev{color:var(--fg-3);flex:none}
@@ -393,7 +397,7 @@ const DEFAULT = {
       {id:'crunch',name:'Crunch en polea',type:'fuerza',sets:3,reps:'12-15',weight:0,rest:60}
     ]}
   },
-  planVersion: 12,
+  planVersion: 13,
   warmups: {
     espalda: 'General (4 min):\n2 min de remo o bici suave\nDislocaciones con banda o palo: 10\nFace pull liviano: 15\nColgado de la barra: 2 × 20 s (relajado y después hombros abajo)',
     pecho: 'General (4 min):\n2 min de remo suave\nRotación externa de hombro con banda o polea: 15 por brazo\nFlexiones lentas: 10\nAproximación en press banca:\nBarra sola × 10\n50 % del peso × 6\n75 % × 3',
@@ -639,7 +643,7 @@ function viewHoy(){
       if(ex.type==='cardio'){const cc=last.e.cardio||{}; sub+=` · última <b>${cc.min||0} min</b>`}
       else{const best=(last.e.sets||[]).reduce((a,x)=>!a||x.w>a.w?x:a,null); if(best) sub+=` · última <b>${fmtKg(best.w)} × ${best.r}</b>`}
     }
-    return `<div class="row tap" data-act="exhist" data-ex="${esc(ex.id)}" role="button" tabindex="0" aria-label="Historial de ${esc(ex.name)}"><div class="ftile" style="${tileStyle(c)}">${fig(ex,c)}<span class="fnum">${i+1}</span></div><div class="row-main"><div class="row-title">${esc(ex.name)}</div><div class="row-sub">${sub}</div>${suggestUp(ex,last)?'<span class="badge up" style="display:inline-block;margin-top:6px">Subí peso</span>':''}</div><button class="vid" data-act="tech" data-ex="${esc(ex.id)}" aria-label="Ver técnica de ${esc(ex.name)}">${IC_PLAY}</button></div>`;
+    return `<div class="row tap" data-act="exhist" data-ex="${esc(ex.id)}" role="button" tabindex="0" aria-label="Historial de ${esc(ex.name)}"><div class="ftile" style="${tileStyle(c)}">${fig(ex,c)}<span class="fnum">${i+1}</span></div><div class="row-main"><div class="row-title">${esc(ex.name)}</div><div class="row-sub">${sub}</div>${noteHTML(ex.name)}${suggestUp(ex,last)?'<span class="badge up" style="display:inline-block;margin-top:6px">Subí peso</span>':''}</div><button class="vid" data-act="tech" data-ex="${esc(ex.id)}" aria-label="Ver técnica de ${esc(ex.name)}">${IC_PLAY}</button></div>`;
   }).join('')+`</div>`;
   h+=`<button class="btn primary block" data-act="start" data-k="${key}">Empezar entrenamiento</button>`;
   return h+cloudNote();
@@ -670,14 +674,14 @@ function viewWorkout(){
     const ex=r.exercises.find(x=>x.id===e.exId)||{reps:'',rest:90};
     const last=lastFor(e.exId);
     if(e.type==='cardio'){
-      return `<section class="ex"><div class="ex-h"><div class="ftile lg" style="${tileStyle(c)}">${fig(e,c)}</div><div class="row-main"><div class="row-title">${esc(e.name)}</div><div class="row-sub">Objetivo ${esc(ex.reps)} min</div><button class="vlink" data-act="tech" data-ex="${esc(e.exId)}">${IC_PLAY} Ver técnica 3D</button></div><button class="chk" aria-label="Hecho" aria-pressed="${!!e.done}" data-act="cdone" data-ei="${ei}">${IC.check}</button></div>
+      return `<section class="ex"><div class="ex-h"><div class="ftile lg" style="${tileStyle(c)}">${fig(e,c)}</div><div class="row-main"><div class="row-title">${esc(e.name)}</div><div class="row-sub">Objetivo ${esc(ex.reps)} min</div>${noteHTML(e.name)}<button class="vlink" data-act="tech" data-ex="${esc(e.exId)}">${IC_PLAY} Ver técnica 3D</button><button class="note-btn" data-act="note" data-ex="${esc(e.exId)}">${noteOf(e.name)?'Editar nota':'+ Agregar nota'}</button></div><button class="chk" aria-label="Hecho" aria-pressed="${!!e.done}" data-act="cdone" data-ei="${ei}">${IC.check}</button></div>
       <div class="cardio">
         <div class="field"><label for="c-${ei}-min">Minutos</label><input id="c-${ei}-min" inputmode="decimal" data-cf="min" data-ei="${ei}" value="${esc(e.cardio.min)}"></div>
         <div class="field"><label for="c-${ei}-dist">Distancia (km)</label><input id="c-${ei}-dist" inputmode="decimal" data-cf="dist" data-ei="${ei}" value="${esc(e.cardio.dist)}"></div>
         <div class="field"><label for="c-${ei}-level">Damper</label><input id="c-${ei}-level" inputmode="numeric" data-cf="level" data-ei="${ei}" value="${esc(e.cardio.level)}"></div>
       </div></section>`;
     }
-    return `<section class="ex"><div class="ex-h"><div class="ftile lg" style="${tileStyle(c)}">${fig(e,c)}<span class="fnum">${ei+1}</span></div><div class="row-main"><div class="row-title">${esc(e.name)}</div><div class="row-sub">${esc(ex.reps)} reps · ${mmss(ex.rest)} de descanso</div><button class="vlink" data-act="tech" data-ex="${esc(e.exId)}">${IC_PLAY} Ver técnica 3D</button></div>${suggestUp(ex,last)?'<span class="badge up">Subí peso</span>':''}</div>
+    return `<section class="ex"><div class="ex-h"><div class="ftile lg" style="${tileStyle(c)}">${fig(e,c)}<span class="fnum">${ei+1}</span></div><div class="row-main"><div class="row-title">${esc(e.name)}</div><div class="row-sub">${esc(ex.reps)} reps · ${mmss(ex.rest)} de descanso</div>${noteHTML(e.name)}<button class="vlink" data-act="tech" data-ex="${esc(e.exId)}">${IC_PLAY} Ver técnica 3D</button><button class="note-btn" data-act="note" data-ex="${esc(e.exId)}">${noteOf(e.name)?'Editar nota':'+ Agregar nota'}</button></div>${suggestUp(ex,last)?'<span class="badge up">Subí peso</span>':''}</div>
     <div class="tbl"><div class="tr hd"><span class="th">Serie</span><span class="th">Anterior</span><span class="th">kg</span><span class="th">Reps</span><span class="th"></span></div>
     ${e.sets.map((s,si)=>`<div class="tr${s.done?' done':''}${cur&&cur.ei===ei&&cur.si===si?' cur':''}"><span class="n">${si+1}</span><span class="prev">${esc(s.prev||'—')}</span>
       <input id="w-${ei}-${si}" inputmode="decimal" aria-label="Peso serie ${si+1}" data-sf="w" data-ei="${ei}" data-si="${si}" value="${esc(s.w)}">
@@ -955,6 +959,12 @@ async function openTech(id){
     msg.hidden=true; TECH.eng.show(aid); TECH.eng.start();
   }catch(e){TECH.loading=null; msg.hidden=false; msg.textContent='No se pudo cargar la animación. Revisá la conexión y volvé a intentar.'}
 }
+// notas por ejercicio (compartidas entre días por nombre)
+const noteKey=n=>String(n||'').trim().toLowerCase();
+function noteOf(name){ return ((S.plan.notes||{})[noteKey(name)]||'').trim() }
+function noteHTML(name){ const n=noteOf(name); return n?`<div class="row-note">${esc(n)}</div>`:'' }
+let noteT=null;
+function saveNote(name,txt){ S.plan.notes=S.plan.notes||{}; const k=noteKey(name); if(txt.trim()) S.plan.notes[k]=txt; else delete S.plan.notes[k]; clearTimeout(noteT); noteT=setTimeout(()=>S.store.savePlan(S.plan).catch(()=>{}),400) }
 function exHistHTML(id){
   const ex=findEx(id); if(!ex) return '';
   const nk=n=>String(n||'').trim().toLowerCase(), ids=new Set([id]);
@@ -970,10 +980,11 @@ function exHistHTML(id){
     return `<div class="hl"><span class="d">${fmtDate(s.date)}</span><span class="v">${ss.length?ss.map(x=>{const t=`${+x.w?fmtKg(x.w)+' × ':''}${x.r}`; return `<span style="white-space:nowrap">${x===top&&best&&x===best.x?`<b>${t}</b>`:t}</span>`}).join(' · '):'—'}</span></div>`}).join('')+`</div>`;
   return stats+`<div class="card" style="padding:12px">${chart(id,[...ids])}</div>`+list+(rows.length>30?`<div class="muted" style="font-size:.8rem;text-align:center">Mostrando las últimas 30 sesiones</div>`:'');
 }
-function openExHist(id){const ex=findEx(id); if(!ex) return; document.getElementById('hsheet-title').textContent=ex.name; document.getElementById('hsheet-body').innerHTML=exHistHTML(id); document.getElementById('hsheet').hidden=false; document.body.style.overflow='hidden'; navPush('hist',closeExHistNow)}
+function openExHist(id,focus){const ex=findEx(id); if(!ex) return; document.getElementById('hsheet-title').textContent=ex.name; document.getElementById('hsheet-body').innerHTML=`<label style="display:flex;flex-direction:column;gap:6px"><span style="font-weight:700">Notas</span><textarea class="note-ed" id="note-ed" data-name="${esc(ex.name)}" placeholder="Ej.: torso inclinado hacia adelante, asiento en 4…">${esc(noteOf(ex.name))}</textarea><span class="muted" style="font-size:.78rem">Se guarda sola y aparece en todos los días que tengan este ejercicio.</span></label>`+exHistHTML(id); if(focus) setTimeout(()=>{const t=document.getElementById('note-ed'); t&&t.focus()},50); document.getElementById('hsheet').hidden=false; document.body.style.overflow='hidden'; navPush('hist',closeExHistNow)}
 function closeExHist(){ if(!navClose('hist')) closeExHistNow() }
-function closeExHistNow(){document.getElementById('hsheet').hidden=true; if(!TECH.open) document.body.style.overflow=''}
+function closeExHistNow(){document.getElementById('hsheet').hidden=true; render(); if(!TECH.open) document.body.style.overflow=''}
 document.getElementById('hsheet-close').addEventListener('click',closeExHist);
+document.getElementById('hsheet').addEventListener('input',e=>{ if(e.target.id==='note-ed') saveNote(e.target.dataset.name,e.target.value) });
 document.getElementById('hsheet').addEventListener('click',e=>{if(e.target.id==='hsheet') closeExHist()});
 document.addEventListener('keydown',e=>{const h=document.getElementById('hsheet'); if(!h.hidden&&e.key==='Escape') closeExHist(); if(h.hidden&&(e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.act==='exhist'){e.preventDefault(); openExHist(e.target.dataset.ex)}});
 function closeTech(){ if(!navClose('tech')) closeTechNow() }
@@ -994,6 +1005,7 @@ document.addEventListener('click',async ev=>{
   switch(a){
     case 'tech': openTech(t.dataset.ex); break;
     case 'exhist': openExHist(t.dataset.ex); break;
+    case 'note': openExHist(t.dataset.ex,true); break;
     case 'wear': try{NATIVE.setWearMode(t.dataset.m)}catch(e){} render(); break;
     case 'hc-connect': try{NATIVE.hcConnect()}catch(e){toast('Necesitás la app nueva')} break;
     case 'hc-settings': try{NATIVE.hcSettings()}catch(e){} break;
@@ -1140,6 +1152,10 @@ document.addEventListener('change',async ev=>{
         const OLD=['General (5 min):\n3 min de bici o caminadora con inclinación\nPuente de glúteo en el piso: 15\nSentadilla sin peso: 10\nBalanceo de pierna adelante-atrás y de costado: 10 por pierna\nAproximación en hip thrust:\n1 × 10 con la mitad del peso', 'General (5 min):\n3 min de bici o caminadora con inclinación\nPuente de glúteo en el piso: 15\nSentadilla sin peso: 10\nZancadas caminando: 10\nBalanceo de pierna: 10 por pierna\nAproximación en hack squat:\nSin peso × 10\n40 % × 8\n60 % × 5\n80 % × 2–3\nHip thrust: 1 × 8 liviana antes de empezar'];
         ['piernas','piernas2'].forEach(k=>{ const r=S.plan.routines[k]; if(r&&(!r.warmup||OLD.includes(r.warmup))) r.warmup=DEFAULT.warmups[k] });
         msg='Nuevo calentamiento para los días de piernas';
+      }
+      if(v<13){ S.plan.notes=S.plan.notes||{};
+        if(!S.plan.notes['abductores en máquina']) S.plan.notes['abductores en máquina']='Torso inclinado hacia adelante (más glúteo).';
+        if(!S.plan.notes['curl femoral sentado']) S.plan.notes['curl femoral sentado']='Respaldo/torso inclinado hacia adelante: estira más el femoral.';
       }
       if(v<12){ // sin aproximación en dominadas (solo si no lo editaste)
         const OLDE='General (4 min):\n2 min de remo o bici suave\nDislocaciones con banda o palo: 10\nFace pull liviano: 15\nColgado de la barra: 2 × 20 s (relajado y después hombros abajo)\nAproximación en dominadas:\n1 × 5 con más asistencia que la de trabajo\n1 × 3 con la asistencia de trabajo';
