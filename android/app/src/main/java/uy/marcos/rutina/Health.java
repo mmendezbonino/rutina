@@ -5,6 +5,7 @@ import android.content.pm.PackageManager;
 import android.health.connect.HealthConnectException;
 import android.health.connect.HealthConnectManager;
 import android.health.connect.InsertRecordsResponse;
+import android.health.connect.RecordIdFilter;
 import android.health.connect.ReadRecordsRequestUsingFilters;
 import android.health.connect.ReadRecordsResponse;
 import android.health.connect.TimeInstantRangeFilter;
@@ -191,6 +192,20 @@ final class Health {
             list.add(b.build());
             hcm.insertRecords(list, ex, new OutcomeReceiver<InsertRecordsResponse, HealthConnectException>() {
                 @Override public void onResult(InsertRecordsResponse r) { reply.send(id, "{\"ok\":true}"); }
+                @Override public void onError(HealthConnectException e) { fail(id, e); }
+            });
+        } catch (Throwable t) { fail(id, t); }
+    }
+
+    /** Borra un entrenamiento que guardó esta app (por su id propio), p. ej. si la pulsera ya registró uno a esa hora. */
+    void deleteSession(String id, String clientId) {
+        if (!available() || !has("WRITE_EXERCISE")) { fail(id, new Exception("sin permiso")); return; }
+        try {
+            HealthConnectManager hcm = act.getSystemService(HealthConnectManager.class);
+            List<RecordIdFilter> ids = new ArrayList<>();
+            ids.add(RecordIdFilter.fromClientRecordId(ExerciseSessionRecord.class, clientId));
+            hcm.deleteRecords(ids, ex, new OutcomeReceiver<Void, HealthConnectException>() {
+                @Override public void onResult(Void v) { reply.send(id, "{\"ok\":true}"); }
                 @Override public void onError(HealthConnectException e) { fail(id, e); }
             });
         } catch (Throwable t) { fail(id, t); }

@@ -163,7 +163,7 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public int version() { return 6; }
+        public int version() { return 7; }
 
         /** Contador en la pulsera: "off", "media" o "notif". */
         @JavascriptInterface
@@ -186,6 +186,12 @@ public class MainActivity extends Activity {
         public void hcWrite(String id, String clientId, double start, double end, String title, String notes) {
             health.writeSession(id, clientId, (long) start, (long) end, title, notes);
         }
+
+        @JavascriptInterface
+        public void hcDelete(String id, String clientId) { health.deleteSession(id, clientId); }
+
+        @JavascriptInterface
+        public String hcPkg() { return getPackageName(); }
 
         /** Abre los ajustes de Health Connect (para revisar permisos o qué apps comparten datos). */
         @JavascriptInterface

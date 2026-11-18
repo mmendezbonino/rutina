@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.11.18-6";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.11.18-7";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -511,7 +511,7 @@ async function finishWorkout(){
   catch(e){toast('No se pudo guardar. Probá de nuevo.'); return}
   S.sessions.unshift(sess); S.workout=null; S.confirmFinish=false; stopTimer(); stopClock(); saveDraft();
   toast('Entrenamiento guardado'); render(); window.scrollTo(0,0);
-  hcSaveSession(sess);
+  setTimeout(()=>hcProcess(false),5000);
 }
 
 // ---------- clocks ----------
@@ -820,7 +820,7 @@ const IS_PWA=!!window.__PWA, APP_VERSION=window.__APP_VERSION||'';
 function backupJSON(){return JSON.stringify({app:'cuaderno-rutina',v:1,exportedAt:new Date().toISOString(),plan:S.plan,sessions:S.sessions.map(({_id,...r})=>r)})}
 // avisos de descanso en la app de Android: muestra si están bloqueados y deja probarlos
 const APK_URL='https://github.com/mmendezbonino/rutina/releases/download/apk/cuaderno-rutina.apk';
-const APK_V=6; // versión del puente Android que trae la última APK publicada
+const APK_V=7; // versión del puente Android que trae la última APK publicada
 function nativeStatus(){ if(!NATIVE) return null; try{ if(!NATIVE.version||NATIVE.version()<APK_V) return {old:true}; return JSON.parse(NATIVE.status()) }catch(e){ return {old:true} } }
 function notifProblem(st){ if(!st||st.old) return ''; if(!st.on) return 'Las notificaciones de la app están apagadas'; if(st.imp===0) return 'El canal «Fin del descanso» está bloqueado'; if(st.imp>0&&st.imp<3) return 'El aviso está configurado sin sonido'; return '' }
 // ---------- Samsung Health (Health Connect, desde la app de Android) ----------
@@ -838,25 +838,54 @@ async function hcSaveSession(s){
   const notes=`${s.entries.length} ejercicios · ${sets} series · ${fmtVol(volOf(s))}\n`+s.entries.map(e=>e.type==='cardio'?`${e.name}: ${e.cardio.min} min`:`${e.name}: ${e.sets.map(x=>`${x.w?fmtKg(x.w)+'×':''}${x.r}`).join(', ')}`).join('\n');
   const r=await hcCall(id=>NATIVE.hcWrite(id,'rutina-'+s.id,a,b,s.name,notes)); return !!(r&&r.ok)
 }
-async function hcSyncAll(quiet){ let ok=0; for(const s of S.sessions){ if(await hcSaveSession(s)) ok++ } S.plan.hcSynced=true; try{await S.store.savePlan(S.plan)}catch(e){} if(!quiet||ok) toast(ok?(ok===1?'Entrenamiento guardado en Samsung Health':`${ok} entrenamientos guardados en Samsung Health`):'No se pudo guardar en Samsung Health'); render() }
+// ¿la pulsera registró un ejercicio a la misma hora? (otro origen que esta app, con al menos 10 min en común)
+async function hcBandFor(s){
+  if(!hcHas('READ_EXERCISE')) return null; const [a,b]=sessTimes(s), me=(()=>{try{return NATIVE.hcPkg()}catch(e){return 'uy.marcos.rutina'}})();
+  const ex=await hcRead('ex',a-3*3600e3,b+3*3600e3); if(!ex) return null;
+  let best=null; for(const [x,y,type,title,pkg] of ex){ if(pkg===me) continue; const ov=Math.min(y,b)-Math.max(x,a); if(ov>=600000&&(!best||ov>best.ov)) best={a:x,b:y,type,title,pkg,ov} }
+  return best;
+}
+// un solo entrenamiento por sesión en Samsung Health: si la pulsera lo registró, se usa ese; si no, lo manda la app
+let hcBusy=false, hcLast=0;
+async function hcProcess(force){
+  if(hcBusy||!hcHas('WRITE_EXERCISE')) return 0; if(!force&&Date.now()-hcLast<300000) return 0; hcBusy=true; hcLast=Date.now();
+  const st=S.plan.hcState=S.plan.hcState||{}; let changed=0, wrote=0;
+  try{
+    for(const s of S.sessions.slice(0,force?S.sessions.length:40)){
+      const [a,b]=sessTimes(s), age=Date.now()-b, cur=st[s.id];
+      if(cur==='band'||(cur==='app'&&age>3*864e5)) continue;   // ya resuelto
+      if(!force&&age<90*60000) continue;                         // esperá a que la pulsera sincronice
+      const band=await hcBandFor(s);
+      if(band){ if(cur==='app') await hcCall(id=>NATIVE.hcDelete(id,'rutina-'+s.id)); st[s.id]='band'; changed++ }
+      else if(cur!=='app'&&S.plan.hcWrite!==false){ if(await hcSaveSession(s)){ st[s.id]='app'; changed++; wrote++ } }
+    }
+  }catch(e){} hcBusy=false;
+  if(changed){ try{await S.store.savePlan(S.plan)}catch(e){} }
+  return wrote;
+}
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') setTimeout(()=>hcProcess(false),3000) });
+async function hcSyncAll(quiet){ hcLast=0; const ok=await hcProcess(true); S.plan.hcSynced=true; try{await S.store.savePlan(S.plan)}catch(e){} if(!quiet||ok) toast(ok?(ok===1?'Entrenamiento guardado en Samsung Health':`${ok} entrenamientos guardados en Samsung Health`):'Samsung Health ya está al día'); render() }
 // pulso y calorías de una sesión (se piden una vez y quedan en memoria)
 function hcLoadSess(s){
   if(HC.sess[s.id]||HC.loading[s.id]||!hcHas('READ_HEART_RATE')) return; HC.loading[s.id]=true;
-  const [a,b]=sessTimes(s);
-  Promise.all([hcRead('hr',a-60000,b+120000), hcHas('READ_ACTIVE_CALORIES_BURNED')?hcRead('acal',a,b):null, hcHas('READ_TOTAL_CALORIES_BURNED')?hcRead('tcal',a,b):null]).then(([hr,ac,tc])=>{
+  const [a0,b0]=sessTimes(s);
+  hcBandFor(s).then(band=>{ const a=band?Math.min(a0,band.a):a0, b=band?Math.max(b0,band.b):b0;
+  return Promise.all([hcRead('hr',a-60000,b+120000), hcHas('READ_ACTIVE_CALORIES_BURNED')?hcRead('acal',a,b):null, hcHas('READ_TOTAL_CALORIES_BURNED')?hcRead('tcal',a,b):null]).then(([hr,ac,tc])=>{
     const kc=arr=>arr&&arr.length?Math.round(arr.reduce((t,[x,y,k])=>{const ov=Math.max(0,Math.min(y,b)-Math.max(x,a)), d=Math.max(1,y-x); return t+k*Math.min(1,ov/d)},0)):null;
     const pts=(hr||[]).sort((p,q)=>p[0]-q[0]);
-    HC.sess[s.id]={pts, avg:pts.length?Math.round(pts.reduce((t,p)=>t+p[1],0)/pts.length):null, max:pts.length?Math.max(...pts.map(p=>p[1])):null, kcal:kc(ac)||kc(tc), a, b};
+    HC.sess[s.id]={pts, avg:pts.length?Math.round(pts.reduce((t,p)=>t+p[1],0)/pts.length):null, max:pts.length?Math.max(...pts.map(p=>p[1])):null, kcal:kc(ac)||kc(tc), a, b, band, at:Date.now()};
     delete HC.loading[s.id]; if(S.tab==='hist'&&S.openSess===s.id) render();
-  });
+  })}).catch(()=>{ delete HC.loading[s.id] });
 }
 function hcExMax(s,e){ const d=HC.sess[s.id]; if(!d||!d.pts.length||!e.sets) return null; const ts=e.sets.map(x=>x.t).filter(Boolean); if(!ts.length) return null;
   const lo=Math.min(...ts)-150000, hi=Math.max(...ts)+30000, v=d.pts.filter(p=>p[0]>=lo&&p[0]<=hi).map(p=>p[1]); return v.length?Math.max(...v):null }
 function hcSessHTML(s){
   if(!hcHas('READ_HEART_RATE')) return '';
-  const d=HC.sess[s.id]; if(!d){ hcLoadSess(s); return `<div class="muted" style="font-size:.85rem">♥ Buscando pulso en Samsung Health…</div>` }
+  let d=HC.sess[s.id]; if(d&&Date.now()-sessTimes(s)[1]<6*3600e3&&Date.now()-d.at>120000){ delete HC.sess[s.id]; d=null }
+  if(!d){ hcLoadSess(s); return `<div class="muted" style="font-size:.85rem">♥ Buscando pulso en Samsung Health…</div>` }
   if(!d.pts.length&&!d.kcal) return `<div class="muted" style="font-size:.85rem">♥ No hay pulso de la pulsera para este entrenamiento.</div>`;
-  let h=`<div class="hstats">${d.avg?`<div><b>${d.avg}</b><span>Pulso promedio</span></div><div><b>${d.max}</b><span>Pulso máximo</span></div>`:''}${d.kcal?`<div><b>${d.kcal}</b><span>kcal activas</span></div>`:''}</div>`;
+  const dur=ms=>{const m=Math.round(ms/60000); return m>=60?`${Math.floor(m/60)} h ${m%60} min`:`${m} min`};
+  let h=(d.band?`<div class="muted" style="font-size:.82rem">⌚ Registrado también en la pulsera · ${dur(d.band.b-d.band.a)}</div>`:'')+`<div class="hstats">${d.avg?`<div><b>${d.avg}</b><span>Pulso promedio</span></div><div><b>${d.max}</b><span>Pulso máximo</span></div>`:''}${d.kcal?`<div><b>${d.kcal}</b><span>kcal</span></div>`:''}</div>`;
   if(d.pts.length>2){ const W=320,H=70,lo=Math.min(...d.pts.map(p=>p[1]))-5,hi=Math.max(...d.pts.map(p=>p[1]))+5, x=t=>(t-d.a)/(d.b-d.a+120000)*W, y=v=>H-(v-lo)/(hi-lo)*H;
     h+=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:70px;display:block" role="img" aria-label="Pulso durante el entrenamiento"><path d="${d.pts.map((p,i)=>`${i?'L':'M'}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--rojo)" stroke-width="2" stroke-linejoin="round"/></svg>`;
     const cov=(d.pts[d.pts.length-1][0]-d.pts[0][0])/(d.b-d.a); if(cov<.6||d.pts.length<20) h+=`<div class="muted" style="font-size:.78rem">La pulsera midió poco durante este entrenamiento. Para un pulso completo, arrancá «Pesas» en la Fit3 al empezar.</div>` }
@@ -1182,6 +1211,7 @@ document.addEventListener('change',async ev=>{
   try{S.sessions=await S.store.loadSessions()}catch(e){S.sessions=[]}
   S.editDraft=null; render();
   if(S.workout){ startClock(); toast('Retomaste el entrenamiento'); }
+  setTimeout(()=>hcProcess(false),4000);
   // precarga el visor 3D en segundo plano para que la técnica abra rápido
   setTimeout(()=>{try{const c=navigator.connection; if(window.Anim3D && !(c&&c.saveData)) Anim3D.load().catch(()=>{})}catch(e){}},2500);
 })();
