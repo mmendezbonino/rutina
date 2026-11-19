@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.11.19-1";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.11.19-2";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -386,7 +386,7 @@ const DEFAULT = {
       {id:'abdm',name:'Abductores en máquina',type:'fuerza',sets:2,reps:'15',weight:0,rest:60},
       {id:'addm',name:'Aductores en máquina',type:'fuerza',sets:2,reps:'15',weight:0,rest:60},
       {id:'gemL',name:'Gemelo en prensa',type:'fuerza',sets:4,reps:'15-20',weight:0,rest:60},
-      {id:'crinv',name:'Crunch inverso en banco inclinado',type:'fuerza',sets:3,reps:'10-15',weight:0,rest:60}
+      {id:'elevp',name:'Elevaciones de piernas colgado',type:'fuerza',sets:3,reps:'10-15',weight:0,rest:75}
     ]},
     piernas2: {name:'Piernas · pesado', color:'piernas', exercises:[
       {id:'hack',name:'Hack squat',type:'fuerza',sets:4,reps:'6-10',weight:0,rest:150},
@@ -397,7 +397,7 @@ const DEFAULT = {
       {id:'crunch',name:'Crunch en polea',type:'fuerza',sets:3,reps:'12-15',weight:0,rest:60}
     ]}
   },
-  planVersion: 14,
+  planVersion: 15,
   warmups: {
     espalda: 'General (4 min):\n2 min de remo o bici suave\nDislocaciones con banda o palo: 10\nFace pull liviano: 15\nColgado de la barra: 2 × 20 s (relajado y después hombros abajo)',
     pecho: 'General (4 min):\n2 min de remo suave\nRotación externa de hombro con banda o polea: 15 por brazo\nFlexiones lentas: 10\nAproximación en press banca:\nBarra sola × 10\n50 % del peso × 6\n75 % × 3',
@@ -1193,7 +1193,11 @@ document.addEventListener('change',async ev=>{
         ['piernas','piernas2'].forEach(k=>{ const r=S.plan.routines[k]; if(r&&(!r.warmup||OLD.includes(r.warmup))) r.warmup=DEFAULT.warmups[k] });
         msg='Nuevo calentamiento para los días de piernas';
       }
-      if(v<14){ // elevaciones de piernas → crunch inverso (miércoles)
+      if(v<15){ // vuelve a elevaciones de piernas colgado (miércoles)
+        const r=S.plan.routines.piernas; if(r){ const i=r.exercises.findIndex(e=>e.id==='crinv'); if(i>=0) r.exercises[i]={id:'elevp',name:'Elevaciones de piernas colgado',type:'fuerza',sets:r.exercises[i].sets||3,reps:'10-15',weight:0,rest:75} }
+        msg='Volvieron las elevaciones de piernas colgado';
+      }
+      if(v<14&&v>=15){ // elevaciones de piernas → crunch inverso (miércoles)
         const r=S.plan.routines.piernas; if(r){ const i=r.exercises.findIndex(e=>e.id==='elevp'); if(i>=0) r.exercises[i]={id:'crinv',name:'Crunch inverso en banco inclinado',type:'fuerza',sets:r.exercises[i].sets||3,reps:'10-15',weight:0,rest:60} }
         msg='Elevaciones de piernas cambiadas por crunch inverso';
       }
