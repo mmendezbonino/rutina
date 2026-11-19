@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.11.18-7";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.11.19-1";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -888,7 +888,7 @@ function hcSessHTML(s){
   let h=(d.band?`<div class="muted" style="font-size:.82rem">⌚ Registrado también en la pulsera · ${dur(d.band.b-d.band.a)}</div>`:'')+`<div class="hstats">${d.avg?`<div><b>${d.avg}</b><span>Pulso promedio</span></div><div><b>${d.max}</b><span>Pulso máximo</span></div>`:''}${d.kcal?`<div><b>${d.kcal}</b><span>kcal</span></div>`:''}</div>`;
   if(d.pts.length>2){ const W=320,H=70,lo=Math.min(...d.pts.map(p=>p[1]))-5,hi=Math.max(...d.pts.map(p=>p[1]))+5, x=t=>(t-d.a)/(d.b-d.a+120000)*W, y=v=>H-(v-lo)/(hi-lo)*H;
     h+=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:70px;display:block" role="img" aria-label="Pulso durante el entrenamiento"><path d="${d.pts.map((p,i)=>`${i?'L':'M'}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(' ')}" fill="none" stroke="var(--rojo)" stroke-width="2" stroke-linejoin="round"/></svg>`;
-    const cov=(d.pts[d.pts.length-1][0]-d.pts[0][0])/(d.b-d.a); if(cov<.6||d.pts.length<20) h+=`<div class="muted" style="font-size:.78rem">La pulsera midió poco durante este entrenamiento. Para un pulso completo, arrancá «Pesas» en la Fit3 al empezar.</div>` }
+    const cov=(d.pts[d.pts.length-1][0]-d.pts[0][0])/(d.b-d.a); if(cov<.6||d.pts.length<20) h+=`<div class="muted" style="font-size:.78rem">La pulsera midió poco durante este entrenamiento. Para un pulso completo, arrancá «Weight machines» en la Fit3 al empezar.</div>` }
   return h;
 }
 // peso y grasa desde Samsung Health para Progreso
@@ -929,7 +929,7 @@ function hcSection(){
     h+=`<div style="display:flex;flex-wrap:wrap;gap:6px">${Object.keys(L).map(k=>`<span class="pill" style="font-size:.8rem;padding:4px 10px;border-radius:999px;background:${g.includes(k)?'var(--surface-2)':'transparent'};border:1px solid var(--line);color:${g.includes(k)?'var(--fg)':'var(--fg-2)'}">${g.includes(k)?'✓':'✕'} ${L[k]}</span>`).join('')}</div>`;
     if(g.includes('WRITE_EXERCISE')) h+=`<label style="display:flex;gap:10px;align-items:center;font-weight:600"><input type="checkbox" data-act="hc-write" ${S.plan.hcWrite!==false?'checked':''} style="width:20px;height:20px"> Guardar mis entrenamientos en Samsung Health</label>`;
     h+=`<div style="display:flex;gap:8px;flex-wrap:wrap">${g.length<st.total?'<button class="btn primary" data-act="hc-connect">Dar los permisos que faltan</button>':''}${g.includes('WRITE_EXERCISE')&&S.sessions.length?`<button class="btn" data-act="hc-sync">${S.sessions.length===1?'Pasar el entrenamiento':`Pasar los ${S.sessions.length} entrenamientos`}</button>`:''}<button class="btn" data-act="hc-settings">Ajustes de Health Connect</button></div>
-    <p class="muted" style="margin:0;font-size:.82rem">Para que el pulso sea preciso, en la Fit3 arrancá el ejercicio «Pesas» al empezar, o poné el pulso en «Medir continuamente» (Galaxy Wearable → Band settings → Health).</p>`;
+    <p class="muted" style="margin:0;font-size:.82rem">Para que el pulso sea preciso, en la Fit3 arrancá el ejercicio «Weight machines» al empezar, o poné el pulso en «Medir continuamente» (Galaxy Wearable → Band settings → Health).</p>`;
   }
   return h+`</div></section>`;
 }
