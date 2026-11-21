@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.11.19-2";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.11.21-1";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -497,10 +497,12 @@ function startWorkout(key){
     return {exId:ex.id,name:ex.name,type:'fuerza',sets};
   })};
   saveDraft(); render(); startClock();
+  if(S.plan.bandRemind!==false) try{NATIVE&&NATIVE.version()>=8&&NATIVE.remind('Arrancá «Weight machines»','Entrenamiento: '+r.name)}catch(e){}
 }
 function saveDraft(){ if(S.workout) LS.set('cr_draft',S.workout); else LS.del('cr_draft') }
 async function finishWorkout(){
   const w=S.workout; const now=Date.now();
+  if(S.plan.bandRemind!==false) try{NATIVE&&NATIVE.version()>=8&&NATIVE.remind('Terminá «Weight machines»','Guardá el ejercicio en la pulsera')}catch(e){}
   const entries=w.entries.map(e=>e.type==='cardio'
     ? {exId:e.exId,name:e.name,type:'cardio',cardio:{min:+e.cardio.min||0,dist:+String(e.cardio.dist).replace(',','.')||0,level:+e.cardio.level||0}}
     : {exId:e.exId,name:e.name,type:'fuerza',sets:e.sets.filter(s=>s.done||s.r!=='').map(s=>{const o={w:+String(s.w).replace(',','.')||0,r:+s.r||0,done:!!s.done}; if(s.t) o.t=s.t; return o})}
@@ -820,7 +822,7 @@ const IS_PWA=!!window.__PWA, APP_VERSION=window.__APP_VERSION||'';
 function backupJSON(){return JSON.stringify({app:'cuaderno-rutina',v:1,exportedAt:new Date().toISOString(),plan:S.plan,sessions:S.sessions.map(({_id,...r})=>r)})}
 // avisos de descanso en la app de Android: muestra si están bloqueados y deja probarlos
 const APK_URL='https://github.com/mmendezbonino/rutina/releases/download/apk/cuaderno-rutina.apk';
-const APK_V=7; // versión del puente Android que trae la última APK publicada
+const APK_V=8; // versión del puente Android que trae la última APK publicada
 function nativeStatus(){ if(!NATIVE) return null; try{ if(!NATIVE.version||NATIVE.version()<APK_V) return {old:true}; return JSON.parse(NATIVE.status()) }catch(e){ return {old:true} } }
 function notifProblem(st){ if(!st||st.old) return ''; if(!st.on) return 'Las notificaciones de la app están apagadas'; if(st.imp===0) return 'El canal «Fin del descanso» está bloqueado'; if(st.imp>0&&st.imp<3) return 'El aviso está configurado sin sonido'; return '' }
 // ---------- Samsung Health (Health Connect, desde la app de Android) ----------
@@ -927,6 +929,7 @@ function hcSection(){
     <p class="muted" style="margin:0;font-size:.82rem">En la pantalla que se abre, tocá «Permitir todo». Después, en Samsung Health → Ajustes → Health Connect, fijate que comparta tus datos.</p>`;
   } else {
     h+=`<div style="display:flex;flex-wrap:wrap;gap:6px">${Object.keys(L).map(k=>`<span class="pill" style="font-size:.8rem;padding:4px 10px;border-radius:999px;background:${g.includes(k)?'var(--surface-2)':'transparent'};border:1px solid var(--line);color:${g.includes(k)?'var(--fg)':'var(--fg-2)'}">${g.includes(k)?'✓':'✕'} ${L[k]}</span>`).join('')}</div>`;
+    h+=`<label style="display:flex;gap:10px;align-items:center;font-weight:600"><input type="checkbox" data-act="band-rem" ${S.plan.bandRemind!==false?'checked':''} style="width:20px;height:20px"> Recordarme arrancar y terminar «Weight machines» en la pulsera</label>`;
     if(g.includes('WRITE_EXERCISE')) h+=`<label style="display:flex;gap:10px;align-items:center;font-weight:600"><input type="checkbox" data-act="hc-write" ${S.plan.hcWrite!==false?'checked':''} style="width:20px;height:20px"> Guardar mis entrenamientos en Samsung Health</label>`;
     h+=`<div style="display:flex;gap:8px;flex-wrap:wrap">${g.length<st.total?'<button class="btn primary" data-act="hc-connect">Dar los permisos que faltan</button>':''}${g.includes('WRITE_EXERCISE')&&S.sessions.length?`<button class="btn" data-act="hc-sync">${S.sessions.length===1?'Pasar el entrenamiento':`Pasar los ${S.sessions.length} entrenamientos`}</button>`:''}<button class="btn" data-act="hc-settings">Ajustes de Health Connect</button></div>
     <p class="muted" style="margin:0;font-size:.82rem">Para que el pulso sea preciso, en la Fit3 arrancá el ejercicio «Weight machines» al empezar, o poné el pulso en «Medir continuamente» (Galaxy Wearable → Band settings → Health).</p>`;
@@ -1050,6 +1053,7 @@ document.addEventListener('click',async ev=>{
     case 'hc-connect': try{NATIVE.hcConnect()}catch(e){toast('Necesitás la app nueva')} break;
     case 'hc-settings': try{NATIVE.hcSettings()}catch(e){} break;
     case 'hc-sync': toast('Guardando en Samsung Health…'); hcSyncAll(false); break;
+    case 'band-rem': S.plan.bandRemind=t.checked; try{await S.store.savePlan(S.plan)}catch(e){} break;
     case 'hc-write': S.plan.hcWrite=t.checked; try{await S.store.savePlan(S.plan)}catch(e){} break;
     case 'wear-test': try{NATIVE.startRest(Date.now()+40000,'Prueba del contador'); toast('Descanso de prueba: mirá la pulsera')}catch(e){toast('Necesitás la app nueva')} break;
     case 'bk-copy': {const txt=backupJSON(); try{await navigator.clipboard.writeText(txt); toast('Respaldo copiado'); S.bkText=null}catch(e){S.bkText=txt; toast('Copialo desde el cuadro de abajo')} render(); break}

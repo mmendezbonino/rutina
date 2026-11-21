@@ -163,7 +163,10 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public int version() { return 7; }
+        public int version() { return 8; }
+
+        @JavascriptInterface
+        public void remind(String title, String text) { Notif.remind(MainActivity.this, title, text); }
 
         /** Contador en la pulsera: "off", "media" o "notif". */
         @JavascriptInterface

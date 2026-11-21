@@ -26,6 +26,27 @@ final class Notif {
         ch.setVibrationPattern(VIB);
         ch.setSound(null, null);
         nm.createNotificationChannel(ch);
+        NotificationChannel r = new NotificationChannel(CH_REM, "Recordatorio de la pulsera", NotificationManager.IMPORTANCE_HIGH);
+        r.setDescription("Te recuerda arrancar y terminar el ejercicio en la pulsera");
+        r.enableVibration(true);
+        r.setVibrationPattern(new long[]{0, 400});
+        r.setSound(null, null);
+        nm.createNotificationChannel(r);
+    }
+
+    static final String CH_REM = "recordatorio";
+    static final int ID_REM = 8;
+
+    /** Aviso corto (llega a la pulsera): arrancar / terminar el ejercicio. */
+    static void remind(Context c, String title, String text) {
+        try {
+            channel(c);
+            Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(c, CH_REM) : new Notification.Builder(c);
+            b.setSmallIcon(R.drawable.ic_stat).setContentTitle(title).setContentText(text)
+                    .setAutoCancel(true).setColor(0xFF0B2A6B).setCategory(Notification.CATEGORY_REMINDER)
+                    .setTimeoutAfter(120000).setContentIntent(openIntent(c, 7));
+            c.getSystemService(NotificationManager.class).notify(ID_REM, b.build());
+        } catch (Exception e) { /* sin permiso de notificaciones */ }
     }
 
     private static PendingIntent alarmIntent(Context c) {
