@@ -72,6 +72,24 @@ const META=[
  {id:'thrust',name:'Hip thrust en máquina',main:['Glúteo'],sec:['Isquiotibiales','Cuádriceps'],lab:['Subí la cadera','Bajá controlado'],work:{glutes:1,hams:.45,quads:.3},
   cam:{yaw:90,pitch:10,dist:3.3,ty:.48,tz:.38},cue:'Espalda alta apoyada en el borde del respaldo, el pad sobre la cadera y los pies planos al ancho de los hombros.',
   steps:['Apoyá la parte baja de los omóplatos en el borde del respaldo y agarrá las manijas del pad.','Empujá con los talones y subí la cadera hasta que el torso quede en línea con los muslos, con el mentón hacia el pecho.','Apretá el glúteo un segundo arriba y bajá controlado sin llegar a apoyarte.']},
+ {id:'bulgarian',name:'Sentadilla búlgara con mancuernas',main:['Cuádriceps','Glúteo'],sec:['Aductores','Isquiotibiales'],lab:['Subí','Bajá controlado'],work:{quads:1,glutes:.85,adductors:.4,hams:.2},
+  cam:{yaw:70,pitch:8,dist:3.6,ty:.75,tz:-.15},cue:'Pie de atrás apoyado en el banco por el empeine, mancuernas a los costados.',
+  steps:['Pie de adelante a unos 70–80 cm del banco, torso apenas inclinado.','Bajá en 2–3 s hasta que el muslo de adelante quede paralelo al piso y la rodilla de atrás casi toque.','Subí empujando con todo el pie de adelante; terminá las repeticiones y cambiá de pierna.']},
+ {id:'bbthrust',name:'Hip thrust con barra',main:['Glúteo mayor'],sec:['Isquiotibiales','Cuádriceps'],lab:['Subí','Bajá controlado'],work:{glutes:1,hams:.4,quads:.25},
+  cam:{yaw:90,pitch:10,dist:3.4,ty:.45,tz:.3},cue:'Espalda alta apoyada en el borde del banco, barra sobre la cadera con una toalla, pies planos.',
+  steps:['Mentón al pecho y manos sujetando la barra a los costados.','Empujá con los talones hasta que el torso quede paralelo al piso; apretá el glúteo 1 s arriba.','Bajá en 2 s hasta casi tocar el piso con la cola.']},
+ {id:'rdl',name:'Peso muerto rumano con barra',main:['Isquiotibiales','Glúteo'],sec:['Espalda baja','Antebrazo'],lab:['Subí','Bajá controlado'],work:{hams:1,glutes:.8,lowback:.45,forearm:.3,traps:.2},
+  cam:{yaw:78,pitch:6,dist:3.6,ty:.8,tz:0},cue:'De pie con la barra apoyada en los muslos, pies al ancho de la cadera y rodillas apenas flexionadas.',
+  steps:['Llevá la cadera hacia atrás con la espalda recta; la barra baja pegada a las piernas.','Bajá hasta sentir el estiramiento atrás del muslo, más o menos debajo de la rodilla.','Subí empujando la cadera hacia adelante y apretá el glúteo arriba, sin echar el torso hacia atrás.']},
+ {id:'goblet',name:'Sentadilla goblet con talones elevados',main:['Cuádriceps'],sec:['Glúteo','Aductores','Core'],lab:['Subí','Bajá controlado'],work:{quads:1,glutes:.5,adductors:.35,abs:.2},
+  cam:{yaw:58,pitch:8,dist:3.5,ty:.75,tz:0},cue:'Talones sobre un disco o un libro, una mancuerna vertical sostenida contra el pecho.',
+  steps:['Pies al ancho de los hombros, codos apuntando hacia abajo.','Bajá profundo con el torso recto; las rodillas pueden pasar la punta de los pies.','Subí empujando con todo el pie, sin despegar los talones del apoyo.']},
+ {id:'calf1',name:'Gemelo a una pierna en escalón',main:['Gemelos'],sec:['Sóleo'],lab:['Subí','Bajá controlado'],work:{calves:1},
+  cam:{yaw:105,pitch:8,dist:4,ty:.95,tz:.1},cue:'Punta de un pie en el borde de un escalón, mancuerna en esa mano y la otra en la pared.',
+  steps:['Talón colgando por debajo del escalón: pausa de 2 s bien estirado.','Subí en punta de pie lo más alto que puedas, 1 s arriba.','Bajá despacio, sin rebotar; terminá las repeticiones y cambiá de pierna.']},
+ {id:'abwheel',name:'Rueda abdominal',main:['Abdominales'],sec:['Oblicuos','Dorsal ancho','Tríceps'],lab:['Volvé','Estirá controlado'],work:{abs:1,obliques:.4,lats:.35,triceps:.2},
+  cam:{yaw:72,pitch:12,dist:3.6,ty:.35,tz:.45},cue:'De rodillas sobre una toalla, manos en la rueda debajo de los hombros.',
+  steps:['Abdomen apretado y la cola apenas hacia adentro, sin arquear la espalda.','Rodá hacia adelante despacio hasta donde puedas sin que la cadera se hunda.','Volvé tirando con el abdomen, no solo con los brazos.']},
  {id:'revcrunch',name:'Crunch inverso en banco inclinado',main:['Abdominales (parte baja)'],sec:['Oblicuos'],lab:['Llevá las rodillas al pecho','Bajá despacio'],work:{abs:1,obliques:.45,forearm:.2},
   cam:{yaw:72,pitch:10,dist:3.6,ty:.85,tz:.0},cue:'Acostado en el banco inclinado con la cabeza arriba, agarrado del borde detrás de la cabeza.',
   steps:['Rodillas dobladas a 90°, muslos apuntando al techo.','Enrollá la pelvis: llevá las rodillas al pecho despegando la cola del banco.','Bajá en 2–3 s hasta que la cola vuelva a apoyar, sin dejar caer las piernas.']},
@@ -100,8 +118,8 @@ const META=[
 A3.list=META;
 A3.meta=id=>META.find(m=>m.id===id)||null;
 // ids de la app → animación; si no hay, se busca por nombre
-const BY_APP={fondos:'dips',dom:'pull',remov:'row',rdelt:'rdelt',lat1:'lat',lat2:'lat',latc:'latcable',lats:'latseat',pred:'preacher',mart:'hammer',banca:'bench',incl:'incline',apert:'fly',skull:'skull',push:'pushdown',remo:'rower',hack:'hack',prensa:'press',gem:'calfpress',hiper:'hyper',hiperlat:'hyperlat',hipt:'thrust',hiptL:'thrust',femsen:'legcurl',femL:'legcurl',gemL:'calfpress',prensag:'press',ext:'legext',abdm:'abd',addm:'add',elevp:'legraise',crinv:'revcrunch',crunch:'cablecrunch',extoh:'ohext'};
-const BY_NAME=[[/lateral.*polea|polea.*lateral/,'latcable'],[/lateral.*sentad/,'latseat'],[/sobre la cabeza|overhead|tras nuca/,'ohext'],[/crunch inverso|reverse crunch/,'revcrunch'],[/crunch|encogimiento abdominal/,'cablecrunch'],[/elevaci[oó]n(es)? de piernas|leg raise|rodillas al pecho/,'legraise'],[/(gemelo|pantorr|calf).*prensa|prensa.*(gemelo|pantorr)/,'calfpress'],[/cu[aá]driceps|extensi[oó]n de pierna/,'legext'],[/femoral|isquio/,'legcurl'],[/skull|franc[eé]s|rompecr/,'skull'],[/fondo|dips|paralelas/,'dips'],[/pushdown|soga|tr[ií]ceps en polea/,'pushdown'],[/dominad|jal[oó]n|pulldown/,'pull'],[/rear delt|p[aá]jaro|deltoide post|face pull/,'rdelt'],[/remo.*(m[aá]quina.*cardio|cardio|ergo)/,'rower'],[/remo/,'row'],[/abduc/,'abd'],[/aduc/,'add'],[/hiperext.*lateral|lateral.*hiperext/,'hyperlat'],[/hip ?thrust|puente de gl/,'thrust'],[/hiperext|lumbar/,'hyper'],[/hack/,'hack'],[/prensa/,'press'],[/predicador|scott/,'preacher'],[/martillo|hammer/,'hammer'],[/lateral|elevaci/,'lat'],[/inclinad/,'incline'],[/apertura|pec ?deck|cruce/,'fly'],[/press.*banca|banca|bench/,'bench']];
+const BY_APP={fondos:'dips',dom:'pull',remov:'row',rdelt:'rdelt',lat1:'lat',lat2:'lat',latc:'latcable',lats:'latseat',pred:'preacher',mart:'hammer',banca:'bench',incl:'incline',apert:'fly',skull:'skull',push:'pushdown',remo:'rower',hack:'hack',prensa:'press',gem:'calfpress',hiper:'hyper',hiperlat:'hyperlat',hipt:'thrust',hiptL:'thrust',femsen:'legcurl',femL:'legcurl',gemL:'calfpress',prensag:'press',ext:'legext',abdm:'abd',addm:'add',elevp:'legraise',crinv:'revcrunch',bulg:'bulgarian',thrb:'bbthrust',rdl:'rdl',gobh:'goblet',gem1:'calf1',rueda:'abwheel',crunch:'cablecrunch',extoh:'ohext'};
+const BY_NAME=[[/b[uú]lgara|split squat/,'bulgarian'],[/hip ?thrust.*barra|barbell hip/,'bbthrust'],[/rumano|rdl|peso muerto/,'rdl'],[/goblet/,'goblet'],[/(gemelo|pantorr|talon|calf).*(una pierna|escal)/,'calf1'],[/rueda|ab ?wheel/,'abwheel'],[/lateral.*polea|polea.*lateral/,'latcable'],[/lateral.*sentad/,'latseat'],[/sobre la cabeza|overhead|tras nuca/,'ohext'],[/crunch inverso|reverse crunch/,'revcrunch'],[/crunch|encogimiento abdominal/,'cablecrunch'],[/elevaci[oó]n(es)? de piernas|leg raise|rodillas al pecho/,'legraise'],[/(gemelo|pantorr|calf).*prensa|prensa.*(gemelo|pantorr)/,'calfpress'],[/cu[aá]driceps|extensi[oó]n de pierna/,'legext'],[/femoral|isquio/,'legcurl'],[/skull|franc[eé]s|rompecr/,'skull'],[/fondo|dips|paralelas/,'dips'],[/pushdown|soga|tr[ií]ceps en polea/,'pushdown'],[/dominad|jal[oó]n|pulldown/,'pull'],[/rear delt|p[aá]jaro|deltoide post|face pull/,'rdelt'],[/remo.*(m[aá]quina.*cardio|cardio|ergo)/,'rower'],[/remo/,'row'],[/abduc/,'abd'],[/aduc/,'add'],[/hiperext.*lateral|lateral.*hiperext/,'hyperlat'],[/hip ?thrust|puente de gl/,'thrust'],[/hiperext|lumbar/,'hyper'],[/hack/,'hack'],[/prensa/,'press'],[/predicador|scott/,'preacher'],[/martillo|hammer/,'hammer'],[/lateral|elevaci/,'lat'],[/inclinad/,'incline'],[/apertura|pec ?deck|cruce/,'fly'],[/press.*banca|banca|bench/,'bench']];
 A3.match=ex=>{
   if(!ex) return null;
   if(ex.type==='cardio' && /remo/i.test(ex.name||'')) return 'rower';
@@ -698,7 +716,61 @@ add:{
  build(){P.abd.build()},
  pose(p){const [U,F]=tilt(-8), f=frame(V(0,.54,-.02),U,F), legs=P.abd.legs(f,rad(lerp(38,6,p)),-1);
    return {f,legs,arms:[1,-1].map(s=>arm(f,s,f.at(s*.28,-.02,.14),V(s,-.4,-.4)))}},
- dyn(J,D){P.abd.dyn(J,D)}}
+ dyn(J,D){P.abd.dyn(J,D)}},
+bulgarian:{
+ // pierna izquierda adelante; empeine derecho sobre el banco
+ build(){B.box([.36,.06,.48],V(0,.42,-.82),'pad'); [-.98,-.66].forEach(z=>B.box([.26,.39,.05],V(0,.195,z),'mach')); dumbbells(['hL','hR','aL','bL','aR','bR'])},
+ pose(p){const q=smooth(0,1,p), [U,F]=tilt(lerp(16,7,q)), f=frame(V(0,lerp(.555,.8,q),lerp(-.04,-.1,q)),U,F);
+   const aF=V(.12,.085,.36), aB=V(-.11,.5,-.6);
+   const legs=[leg(f,1,aF,V(.1,0,1)),leg(f,-1,aB,V(0,-1,.25))];
+   const arms=[1,-1].map(s=>arm(f,s,at(f.sh(s),V(s*.17,-1,-.02).normalize(),.95*LEN.R),V(s*.2,.1,-1)));
+   return {f,legs,arms,toes:[V(.13,.03,.5),V(-.11,.465,-.7)],tips:[V(.135,.015,.56),V(-.11,.455,-.75)]}},
+ dyn(J,D){J.arms.forEach((a,i)=>placeDumbbell(D,i?'R':'L',B.grip(a),a.kax||V(0,0,1)))}},
+bbthrust:{
+ C:V(0,.42,-.08),
+ build(){const C=P.bbthrust.C; B.box([1.15,.07,.3],V(0,C.y-.035,C.z-.15),'pad'); [-.45,.45].forEach(x=>B.box([.06,C.y-.07,.24],V(x,(C.y-.07)/2,C.z-.15),'mach'));
+   B.box([.8,.012,.5],V(0,.006,.6),'pad');
+   B.dyn('bar',()=>B.mkCyl(.0145,'metal')); ['s1','s2'].forEach(k=>B.dyn(k,()=>B.mkCyl(.025,'metal'))); ['p1','p2'].forEach(k=>B.dyn(k,()=>B.mkCyl(.16,'mach'))); B.dyn('tw',()=>B.mkCyl(.045,'pad'))},
+ pose(p){const T0=P.bbthrust, [U,F]=P.thrust.ax(lerp(50,-2,p)), f=frame(at(T0.C,F,lerp(.09,.13,p),U,-.37),U,F), hp=f.at(0,.02,lerp(.25,.19,p));
+   const legs=[1,-1].map(s=>leg(f,s,V(s*.17,.085,.68),V(s*.18,1,.25)));
+   const arms=[1,-1].map(s=>arm(f,s,at(hp,X,s*.33,U,.1),at(V(0,0,0),X,s,U,-.1,F,-.2)));
+   return {f,legs,arms,hp,gtype:'pro',toes:[1,-1].map(s=>V(s*.18,.03,.81)),tips:[1,-1].map(s=>V(s*.19,.015,.87))}},
+ dyn(J,D){const c=at(J.hp,J.f.U,.1); B.seg(D.bar,at(c,X,-.75),at(c,X,.75)); B.seg(D.s1,at(c,X,.5),at(c,X,.75)); B.seg(D.s2,at(c,X,-.75),at(c,X,-.5)); B.seg(D.p1,at(c,X,.52),at(c,X,.56)); B.seg(D.p2,at(c,X,-.56),at(c,X,-.52)); B.seg(D.tw,at(c,X,-.2),at(c,X,.2))}},
+rdl:{
+ build(){B.dyn('bar',()=>B.mkCyl(.0145,'metal')); ['s1','s2'].forEach(k=>B.dyn(k,()=>B.mkCyl(.025,'metal'))); ['p1','p2'].forEach(k=>B.dyn(k,()=>B.mkCyl(.16,'mach')))},
+ pose(p){const q=smooth(0,1,p), [U,F]=tilt(lerp(66,3,q)), f=frame(V(0,lerp(.925,.95,q),lerp(-.3,-.03,q)),U,F);
+   const legs=[1,-1].map(s=>leg(f,s,V(s*.11,.085,.0),V(s*.05,0,1)));
+   const sc=mid(f.sL,f.sR), ky=mid(legs[0].k,legs[1].k);
+   let by=sc.y-.96*LEN.R, bz=Math.max(sc.z-.04, by>ky.y? lerp(ky.z+.13, f.P.z+.17, clamp((by-ky.y)/(f.P.y-ky.y))) : ky.z+.1-(ky.y-by)*.12);
+   by=sc.y-Math.sqrt(Math.max(0,Math.pow(.96*LEN.R,2)-Math.pow(bz-sc.z,2)));
+   const bar=V(0,by,bz), arms=[1,-1].map(s=>arm(f,s,V(s*.24,by,bz),V(s*.3,.2,-1)));
+   return {f,legs,arms,bar,gtype:'pro'}},
+ dyn(J,D){const c=J.bar; B.seg(D.bar,at(c,X,-.75),at(c,X,.75)); B.seg(D.s1,at(c,X,.5),at(c,X,.75)); B.seg(D.s2,at(c,X,-.75),at(c,X,-.5)); B.seg(D.p1,at(c,X,.52),at(c,X,.56)); B.seg(D.p2,at(c,X,-.56),at(c,X,-.52))}},
+goblet:{
+ build(){B.box([.55,.025,.12],V(0,.0125,-.04),'mach'); dumbbells(['hG','aG','bG'])},
+ pose(p){const q=smooth(0,1,p), [U,F]=tilt(lerp(22,4,q)), f=frame(V(0,lerp(.52,.935,q),lerp(-.13,-.03,q)),U,F);
+   const legs=[1,-1].map(s=>leg(f,s,V(s*.15,.115,.0),V(s*.35,0,1)));
+   const c=f.at(0,.33,.19), arms=[1,-1].map(s=>arm(f,s,at(c,f.L,s*.05),V(s*.25,-1,.25)));
+   return {f,legs,arms,c,toes:[1,-1].map(s=>V(s*.18,.035,.13)),tips:[1,-1].map(s=>V(s*.19,.02,.19)),grip:.6}},
+ dyn(J,D){placeDumbbell(D,'G',at(J.c,J.f.U,-.09,J.f.F,.03),J.f.U)}},
+calf1:{
+ build(){B.box([.5,.17,.34],V(.04,.085,.27),'mach'); B.box([.5,1.7,.06],V(-.3,.85,.62),'pad'); dumbbells(['hL','aL','bL'])},
+ pose(p){const q=smooth(0,1,p), th=rad(lerp(-24,34,q)), Bp=V(.1,.215,.15), A=at(Bp,V(0,Math.sin(th),-Math.cos(th)),.135,Y,.03);
+   const f=frame(V(.005,A.y+.85,A.z-.02),Y,V(0,0,1));
+   const legs=[leg(f,1,A,V(.05,0,1)),leg(f,-1,V(.02,A.y+.13,A.z-.14),V(0,-.2,1))];
+   const arms=[arm(f,1,at(f.sL,V(.05,-1,.02).normalize(),.95*LEN.R),V(.2,.1,-1)),arm(f,-1,V(-.24,A.y+1.08,.58),V(-1,-.6,0))];
+   return {f,legs,arms,toes:[Bp,at(legs[1].a,V(0,-.6,-.8).normalize(),.13)],tips:[V(.105,.195,.21),null]}},
+ dyn(J,D){const a=J.arms[0]; placeDumbbell(D,'L',B.grip(a),a.kax||V(0,0,1))}},
+abwheel:{
+ build(){B.box([.4,.02,.24],V(0,.01,.02),'pad'); B.dyn('wh',()=>B.mkCyl(.09,'pad')); B.dyn('ax',()=>B.mkCyl(.014,'metal')); ['gL','gR'].forEach(k=>B.dyn(k,()=>B.mkCyl(.02,'pad')))},
+ pose(p){const q=smooth(0,1,p), ph=rad(lerp(54,14,q));
+   const kn=[1,-1].map(s=>V(s*.1,.075,0)), hipM=V(0,.075+LEN.th*Math.cos(ph),LEN.th*Math.sin(ph));
+   const shy=lerp(.42,.64,q), Pp=at(hipM,Y,.04), al=Math.asin(clamp((shy-Pp.y)/DIM.sh.u,-.95,.95)), U=V(0,Math.sin(al),Math.cos(al)), F=V(0,-Math.cos(al),Math.sin(al));
+   const f=frame(at(hipM,U,.04),U,F), sc=mid(f.sL,f.sR), dy=sc.y-.09, R=.95*LEN.R, wz=sc.z+Math.sqrt(Math.max(0,R*R-dy*dy));
+   const legs=[1,-1].map((s,i)=>({h:f.hip(s),k:kn[i],a:V(s*.1,.07,-.44)}));
+   const arms=[1,-1].map(s=>arm(f,s,V(s*.13,.09,wz),V(s*.3,1,.1)));
+   return {f,legs,arms,wz,gtype:'pro',toes:[1,-1].map(s=>V(s*.1,.03,-.56)),tips:[1,-1].map(s=>V(s*.1,.015,-.61))}},
+ dyn(J,D){const c=V(0,.09,J.wz); B.seg(D.wh,at(c,X,-.04),at(c,X,.04)); B.seg(D.ax,at(c,X,-.2),at(c,X,.2)); B.seg(D.gL,at(c,X,.06),at(c,X,.18)); B.seg(D.gR,at(c,X,-.18),at(c,X,-.06))}}
 };
 
 // ----- ritmo y vida de cada ejercicio: tempo [subida, pausa arriba, bajada, pausa abajo] en segundos -----
@@ -732,6 +804,12 @@ const LIFE={
  ohext:{tempo:[.9,.5,2,.4],life:p=>({sp:{f:lerp(0,-4,p)},head:{p:lerp(10,4,p)},scap:{e:lerp(8,12,p)},stab:.6,sway:.3})},
  legcurl:{tempo:[1,.5,2,.4],life:p=>({sp:{f:lerp(0,3,p)},head:{p:4},stab:.8,sway:.15})},
  legext:{tempo:[1,.9,2,.4],life:p=>({sp:{f:lerp(0,-2,p)},stab:.8,sway:.15})},
+ bulgarian:{tempo:[1.1,.2,2.2,.4],life:p=>({head:{p:6},stab:.8,sway:.2})},
+ bbthrust:{tempo:[1,.9,1.8,.3],life:p=>({sp:{f:lerp(4,-1,p)},head:{p:lerp(18,30,p)},scap:{e:0,p:-3},sway:0})},
+ rdl:{tempo:[1.2,.4,2.4,.4],life:p=>({head:{p:lerp(-10,2,p)},scap:{e:-2,p:2},stab:.6,sway:0})},
+ goblet:{tempo:[1.2,.2,2.2,.4],life:p=>({head:{p:lerp(-6,2,p)},stab:.8,sway:0})},
+ calf1:{tempo:[.8,1,1.6,2],life:p=>({stab:.8,sway:.3})},
+ abwheel:{tempo:[1.4,.4,2.2,.3],life:p=>({sp:{f:lerp(4,22,p)},head:{p:lerp(6,14,p)},stab:.4,sway:0})},
  abd:{tempo:[1,.7,2,.4],life:p=>({stab:.8,sway:.15})},
  add:{tempo:[1,.7,2,.4],life:p=>({stab:.8,sway:.15})}
 };

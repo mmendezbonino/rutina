@@ -14,7 +14,7 @@
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}[hidden]{display:none!important}
 .upd{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));z-index:30;display:flex;align-items:center;gap:12px;background:var(--fg);color:var(--bg);padding:8px 8px 8px 16px;border-radius:999px;font:700 .9rem var(--font);box-shadow:0 8px 24px rgba(0,0,0,.3);white-space:nowrap}
 .upd button{font:800 .85rem var(--font);border:0;border-radius:999px;padding:8px 14px;background:var(--rojo,var(--accent));color:#fff;cursor:pointer}</style>
-<script>window.__PWA=true;window.__APP_VERSION="2026.11.21-1";</script>
+<script>window.__PWA=true;window.__APP_VERSION="2026.11.21-2";</script>
 </head>
 <body>
 <div id="upd" class="upd" hidden>Hay una versión nueva <button type="button">Actualizar</button></div>
@@ -74,6 +74,9 @@ button:disabled{opacity:.35;cursor:default}
 .tile{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:.95rem;flex:none}
 .row-main{flex:1;min-width:0}
 .row.tap{cursor:pointer}
+.seg2{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--surface);border-radius:999px;padding:4px;margin:0 0 14px;box-shadow:var(--shadow,none)}
+.seg2 button{border:0;background:none;padding:10px;border-radius:999px;font:inherit;font-weight:700;color:var(--fg-2);cursor:pointer}
+.seg2 button[aria-checked="true"]{background:var(--azul);color:#fff}
 .row.tap:active{background:var(--surface-2)}
 .hlist{display:flex;flex-direction:column;border-radius:16px;background:var(--surface);overflow:hidden}
 .hl{display:flex;justify-content:space-between;gap:12px;padding:11px 14px;align-items:baseline}
@@ -395,13 +398,22 @@ const DEFAULT = {
       {id:'ext',name:'Extensión de cuádriceps',type:'fuerza',sets:3,reps:'12-15',weight:68,rest:75},
       {id:'gem',name:'Gemelo en prensa',type:'fuerza',sets:4,reps:'10-12',weight:0,rest:60},
       {id:'crunch',name:'Crunch en polea',type:'fuerza',sets:3,reps:'12-15',weight:0,rest:60}
+    ], alt:'casa'},
+    casa: {name:'Piernas · en casa', color:'piernas', exercises:[
+      {id:'bulg',name:'Sentadilla búlgara con mancuernas (por pierna)',type:'fuerza',sets:4,reps:'8-10',weight:12.5,rest:120},
+      {id:'thrb',name:'Hip thrust con barra',type:'fuerza',sets:3,reps:'8-12',weight:40,rest:120},
+      {id:'rdl',name:'Peso muerto rumano con barra',type:'fuerza',sets:4,reps:'8-12',weight:40,rest:120},
+      {id:'gobh',name:'Sentadilla goblet con talones elevados',type:'fuerza',sets:3,reps:'12-15',weight:12.5,rest:90},
+      {id:'gem1',name:'Gemelo a una pierna en escalón (por pierna)',type:'fuerza',sets:4,reps:'10-15',weight:12.5,rest:60},
+      {id:'rueda',name:'Rueda abdominal',type:'fuerza',sets:3,reps:'8-12',weight:0,rest:75}
     ]}
   },
-  planVersion: 15,
+  planVersion: 16,
   warmups: {
     espalda: 'General (4 min):\n2 min de remo o bici suave\nDislocaciones con banda o palo: 10\nFace pull liviano: 15\nColgado de la barra: 2 × 20 s (relajado y después hombros abajo)',
     pecho: 'General (4 min):\n2 min de remo suave\nRotación externa de hombro con banda o polea: 15 por brazo\nFlexiones lentas: 10\nAproximación en press banca:\nBarra sola × 10\n50 % del peso × 6\n75 % × 3',
     piernas: 'General (6 min):\n4 min de bici fija, subiendo el ritmo de a poco\nAbductores en máquina: 1 × 15 con la mitad del peso de trabajo\nExtensión de cuádriceps: 1 × 12 con un 40 % del peso de trabajo\nAproximación en hip thrust:\n1 × 10 con la mitad del peso',
+    casa: 'General (6 min):\n3 min de saltos suaves o trote en el lugar\nSentadillas sin peso: 15\nPuente de glúteo sin peso: 15\nBisagra de cadera con el palo o la barra sola: 10\nAproximación en búlgara:\nSin peso × 6 por pierna',
     piernas2: 'General (8 min):\n4 min de bici fija, subiendo el ritmo de a poco\nExtensión de cuádriceps: 1 × 15 con un 40 % del peso de trabajo\nCurl femoral: 1 × 12 con un 40 % del peso de trabajo\nAproximación en hack squat:\nSin peso × 10\n50 % × 6\n75 % × 3'
   },
   schedule: {1:'espalda',2:'pecho',3:'piernas',4:'espalda2',5:'pecho2',6:'piernas2'}
@@ -577,6 +589,7 @@ const FIG = {
   thrust:{s:['4,40 18,40','44,57 54,57'],c:[[9,33,4.5]],a:[['15,37 32,50 45,42 47,57','15,37 32,37 45,37 47,57']],ac:[[32,50,32,37,3.4]]},
   raises:{s:['20,40 40,40','30,40 30,57','30,18 30,38','30,38 44,40 44,57'],c:[[30,11,4.5]],a:[['26,20 23,36','26,20 10,21'],['34,20 37,36','34,20 50,21']],ac:[[23,38,8,21,3],[37,38,52,21,3]]},
   raisec:{s:['32,15 32,36','32,36 27,57','32,36 37,57','28,18 20,30','56,4 56,58'],c:[[32,9,4.5]],a:[['36,18 34,34','36,18 52,18'],['56,54 34,34','56,54 52,18']]},
+  wheel:{s:['4,58 60,58','12,57 6,56'],a:[['12,57 24,36 32,36','12,57 26,48 44,46'],['26,36 32,57','40,46 52,57']],ac:[[32,54,52,54,3.6]],c:[[33,35,4.3]]},
   revcrunch:{s:['4,46 58,28','12,43 12,58','50,31 50,58','41,27 53,25'],c:[[46,20,4.3]],a:[['41,27 21,35 20,19 7,19','41,27 23,30 31,15 18,10']]},
   legraise:{s:['10,6 54,6','26,6 29,20','38,6 35,20','32,20 32,36'],c:[[32,15,4]],a:[['32,36 31,47 31,58','32,36 44,38 55,37']]},
   crunch:{s:['6,4 6,58','30,56 50,57','30,56 32,38'],a:[['32,38 30,20','32,38 17,40'],['6,8 29,19','6,8 16,37']],ac:[[29,13,12,44,4.5]]},
@@ -601,7 +614,7 @@ const FIG = {
 function patternOf(ex){
   const n=(ex.name||'').toLowerCase();
   if(ex.type==='cardio') return 'rower';
-  const R=[[/sobre la cabeza|overhead|tras nuca/,'ohext'],[/crunch inverso/,'revcrunch'],[/crunch/,'crunch'],[/elevaci[oó]n(es)? de piernas|colgad/,'legraise'],[/(gemelo|pantorr|calf).*prensa|prensa.*(gemelo|pantorr)/,'calfpress'],[/gemelo|pantorr|calf/,'calf'],[/cu[aá]driceps|extensi[oó]n de pierna/,'ext'],[/femoral|isquio/,'legcurl'],[/skull|franc[eé]s|rompecr/,'skull'],[/fondo|dips/,'dips'],[/pushdown|tr[ií]ceps|soga/,'tri'],[/dominad|jal[oó]n|pulldown/,'pull'],[/rear delt|face pull|p[aá]jaro|deltoide post/,'rdelt'],[/remo/,'row'],[/abduc/,'abd'],[/aduc/,'add'],[/hip ?thrust|puente de gl/,'thrust'],[/hiperext|lumbar|rumano|peso muerto/,'hinge'],[/hack/,'hack'],[/prensa/,'legpress'],[/sentadilla|squat|zancada/,'squat'],[/predicador|scott/,'preacher'],[/martillo|hammer/,'hammer'],[/curl|b[ií]ceps/,'curl'],[/lateral.*polea|polea.*lateral/,'raisec'],[/lateral.*sentad/,'raises'],[/lateral|elevaci|militar/,'raise'],[/inclinad/,'incline'],[/apertura|pec ?deck|fly|cruce/,'fly'],[/press|banca|pecho/,'press']];
+  const R=[[/rueda|ab ?wheel/,'wheel'],[/sobre la cabeza|overhead|tras nuca/,'ohext'],[/crunch inverso/,'revcrunch'],[/crunch/,'crunch'],[/elevaci[oó]n(es)? de piernas|colgad/,'legraise'],[/(gemelo|pantorr|calf).*prensa|prensa.*(gemelo|pantorr)/,'calfpress'],[/gemelo|pantorr|calf/,'calf'],[/cu[aá]driceps|extensi[oó]n de pierna/,'ext'],[/femoral|isquio/,'legcurl'],[/skull|franc[eé]s|rompecr/,'skull'],[/fondo|dips/,'dips'],[/pushdown|tr[ií]ceps|soga/,'tri'],[/dominad|jal[oó]n|pulldown/,'pull'],[/rear delt|face pull|p[aá]jaro|deltoide post/,'rdelt'],[/remo/,'row'],[/abduc/,'abd'],[/aduc/,'add'],[/hip ?thrust|puente de gl/,'thrust'],[/hiperext|lumbar|rumano|peso muerto/,'hinge'],[/hack/,'hack'],[/prensa/,'legpress'],[/sentadilla|squat|zancada/,'squat'],[/predicador|scott/,'preacher'],[/martillo|hammer/,'hammer'],[/curl|b[ií]ceps/,'curl'],[/lateral.*polea|polea.*lateral/,'raisec'],[/lateral.*sentad/,'raises'],[/lateral|elevaci|militar/,'raise'],[/inclinad/,'incline'],[/apertura|pec ?deck|fly|cruce/,'fly'],[/press|banca|pecho/,'press']];
   for(const [re,p] of R) if(re.test(n)) return p;
   return 'curl';
 }
@@ -629,7 +642,9 @@ function warmHTML(r,open){ if(!r||!r.warmup) return ''; const ls=String(r.warmup
 function viewHoy(){
   if(S.workout) return viewWorkout();
   const now=new Date(), dow=now.getDay();
-  const key=S.pickDow!=null?(S.plan.schedule[S.pickDow]||null):(S.pick || S.plan.schedule[dow] || null);
+  const base=S.pickDow!=null?(S.plan.schedule[S.pickDow]||null):(S.pick || S.plan.schedule[dow] || null);
+  const altK=base&&S.plan.routines[base]&&S.plan.routines[base].alt&&S.plan.routines[S.plan.routines[base].alt]?S.plan.routines[base].alt:null;
+  const key=altK&&S.home?altK:base;
   const keys=Object.keys(S.plan.routines);
   const hr=now.getHours(), hola=hr<13?'Buen día':hr<20?'Buenas tardes':'Buenas noches';
   let h=`<header><div class="over">${hola} · ${DAYNAMES[dow].toLowerCase()} ${now.getDate()} de ${now.toLocaleDateString('es-UY',{month:'long'})}</div><h1>${key?esc(S.plan.routines[key].name):'Día de descanso'}</h1>`;
@@ -647,6 +662,7 @@ function viewHoy(){
   { const pb=notifProblem(nativeStatus()); if(pb) h+=`<button class="confirm" style="text-align:left;border:1.5px solid var(--rojo);background:var(--rojo-soft)" data-act="tab-rut"><span style="flex:1"><b style="color:var(--rojo)">${pb}.</b> El descanso no te va a avisar con la pantalla apagada. Tocá para arreglarlo.</span></button>` }
   if(!key) return h+`<div class="empty">Hoy no tenés rutina programada.<br>Elegí una arriba si querés entrenar igual.</div>`+cloudNote();
   const r=S.plan.routines[key], c=colorOf(key);
+  if(altK) h+=`<div class="seg2" role="radiogroup" aria-label="Dónde entrenás"><button role="radio" aria-checked="${!S.home}" data-act="home" data-v="0">Gimnasio</button><button role="radio" aria-checked="${!!S.home}" data-act="home" data-v="1">En casa</button></div>`;
   h+=warmHTML(r,false);
   h+=`<div class="group">`+r.exercises.map((ex,i)=>{
     const last=lastFor(ex.id), lastA=last;
@@ -1061,7 +1077,8 @@ document.addEventListener('click',async ev=>{
     case 'bk-import': S.bkImport=true; S.bkText=null; render(); break;
     case 'bk-cancel': S.bkImport=false; render(); break;
     case 'bk-do': {const el=document.getElementById('bk-text'); await backupImport(el?el.value:''); break}
-    case 'pick': { const was=S.pickDow!=null||S.pick; S.pick=t.dataset.k||null; S.pickDow=t.dataset.d!=null?+t.dataset.d:null; const today=new Date().getDay();
+    case 'home': S.home=t.dataset.v==='1'; render(); break;
+    case 'pick': { S.home=false; const was=S.pickDow!=null||S.pick; S.pick=t.dataset.k||null; S.pickDow=t.dataset.d!=null?+t.dataset.d:null; const today=new Date().getDay();
       if(S.pickDow===today&&!S.pick){ S.pickDow=null; navClose('pick') } else if(!was&&(S.pickDow!=null||S.pick)) navPush('pick',()=>{S.pick=null; S.pickDow=null; render()});
       render(); break }
     case 'start': startWorkout(t.dataset.k); window.scrollTo(0,0); break;
@@ -1196,6 +1213,11 @@ document.addEventListener('change',async ev=>{
         const OLD=['General (5 min):\n3 min de bici o caminadora con inclinación\nPuente de glúteo en el piso: 15\nSentadilla sin peso: 10\nBalanceo de pierna adelante-atrás y de costado: 10 por pierna\nAproximación en hip thrust:\n1 × 10 con la mitad del peso', 'General (5 min):\n3 min de bici o caminadora con inclinación\nPuente de glúteo en el piso: 15\nSentadilla sin peso: 10\nZancadas caminando: 10\nBalanceo de pierna: 10 por pierna\nAproximación en hack squat:\nSin peso × 10\n40 % × 8\n60 % × 5\n80 % × 2–3\nHip thrust: 1 × 8 liviana antes de empezar'];
         ['piernas','piernas2'].forEach(k=>{ const r=S.plan.routines[k]; if(r&&(!r.warmup||OLD.includes(r.warmup))) r.warmup=DEFAULT.warmups[k] });
         msg='Nuevo calentamiento para los días de piernas';
+      }
+      if(v<16){ // sábado en casa como alternativa
+        if(!S.plan.routines.casa) S.plan.routines.casa=JSON.parse(JSON.stringify(DEFAULT.routines.casa));
+        if(S.plan.routines.piernas2) S.plan.routines.piernas2.alt='casa';
+        msg='Nuevo: «Piernas · en casa» para los sábados';
       }
       if(v<15){ // vuelve a elevaciones de piernas colgado (miércoles)
         const r=S.plan.routines.piernas; if(r){ const i=r.exercises.findIndex(e=>e.id==='crinv'); if(i>=0) r.exercises[i]={id:'elevp',name:'Elevaciones de piernas colgado',type:'fuerza',sets:r.exercises[i].sets||3,reps:'10-15',weight:0,rest:75} }
